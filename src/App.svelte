@@ -489,6 +489,7 @@
         {documents}
         {collections}
         onOpenCitation={handleOpenCitation}
+        onUploadDocument={(doc) => handleUploadComplete(doc)}
       />
     {:else if selectedCollection}
       <CollectionDetailView
