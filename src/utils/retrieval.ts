@@ -40,12 +40,15 @@ export function executeChunkSearch(
       continue;
     }
 
-    // Filter by scope
+    // Filter by scope and team
     if (options.scope === 'mine' && col.scope !== 'mine') {
       continue;
     }
-    if (options.scope === 'team' && col.scope !== 'team') {
-      continue;
+    if (options.scope === 'team') {
+      if (col.scope !== 'team') continue;
+      if (options.teamName && options.teamName !== 'all' && col.teamName !== options.teamName) {
+        continue;
+      }
     }
     if (options.scope === 'org' && col.scope !== 'org') {
       continue;

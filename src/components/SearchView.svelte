@@ -36,9 +36,45 @@
   let query = $state('');
   let searchMode = $state<'hybrid' | 'dense' | 'lexical'>('hybrid');
   let scope = $state<'all' | 'mine' | 'team' | 'org'>('all');
+  let selectedTeam = $state<string>('all');
   let selectedCollectionId = $state<string>('all');
   let resultLimit = $state<number>(10);
   let selectedChunkId = $state<string | null>(null);
+
+  // Extract all distinct team names from collections
+  let availableTeams = $derived(
+    Array.from(
+      new Set(
+        collections
+          .filter((c) => c.scope === 'team' && c.teamName)
+          .map((c) => c.teamName as string)
+      )
+    ).sort()
+  );
+
+  // Filter collections based on selected scope and team
+  let filteredCollections = $derived(
+    collections.filter((c) => {
+      if (scope === 'mine') return c.scope === 'mine';
+      if (scope === 'org') return c.scope === 'org';
+      if (scope === 'team') {
+        if (c.scope !== 'team') return false;
+        if (selectedTeam !== 'all') return c.teamName === selectedTeam;
+        return true;
+      }
+      return true;
+    })
+  );
+
+  // If selected collection is no longer in filteredCollections, reset to 'all'
+  $effect(() => {
+    if (selectedCollectionId !== 'all') {
+      const exists = filteredCollections.some((c) => c.id === selectedCollectionId);
+      if (!exists) {
+        selectedCollectionId = 'all';
+      }
+    }
+  });
 
   let searchExecution = $derived(
     query.trim()
@@ -46,6 +82,7 @@
           {
             query,
             scope,
+            teamName: scope === 'team' ? selectedTeam : undefined,
             collectionId: selectedCollectionId,
             topK: resultLimit,
             minScoreThreshold: 0.12,
@@ -149,7 +186,7 @@
 
         <!-- Accessible Direct Controls Strip -->
         <div class="p-3.5 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-3 text-left">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 {scope === 'team' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 text-xs transition-all">
             <!-- 1. Retrieval Mode -->
             <div>
               <span class="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
@@ -210,55 +247,43 @@
               </div>
             </div>
 
-            <!-- 3. Scope / Organization Selector -->
+            <!-- 3. Scope Selector (Selectable) -->
             <div>
-              <span class="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
-                Scope / Org
-              </span>
-              <div class="flex items-center p-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[11px]">
-                <button
-                  type="button"
-                  onclick={() => (scope = 'all')}
-                  class="flex-1 py-1.5 px-0.5 rounded-md text-center transition-colors cursor-pointer {scope === 'all'
-                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onclick={() => (scope = 'mine')}
-                  class="flex-1 py-1.5 px-0.5 rounded-md text-center transition-colors cursor-pointer {scope === 'mine'
-                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-                  title="Personal Knowledge"
-                >
-                  Personal
-                </button>
-                <button
-                  type="button"
-                  onclick={() => (scope = 'team')}
-                  class="flex-1 py-1.5 px-0.5 rounded-md text-center transition-colors cursor-pointer {scope === 'team'
-                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-                  title="Team Knowledge"
-                >
-                  Team
-                </button>
-                <button
-                  type="button"
-                  onclick={() => (scope = 'org')}
-                  class="flex-1 py-1.5 px-0.5 rounded-md text-center transition-colors cursor-pointer {scope === 'org'
-                    ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-                  title="Organization Knowledge"
-                >
-                  Org
-                </button>
-              </div>
+              <label for="hero-scope-select" class="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
+                Scope
+              </label>
+              <select
+                id="hero-scope-select"
+                bind:value={scope}
+                class="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1.5 px-2 rounded-lg text-xs border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer"
+              >
+                <option value="all">All Scopes</option>
+                <option value="mine">Personal</option>
+                <option value="team">Team Knowledge</option>
+                <option value="org">Organization</option>
+              </select>
             </div>
 
-            <!-- 4. Collection Filter -->
+            <!-- 4. Team Selector (visible if scope === 'team') -->
+            {#if scope === 'team'}
+              <div in:fly={{ y: -4, duration: 150 }}>
+                <label for="hero-team-select" class="block text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1.5">
+                  Select Team
+                </label>
+                <select
+                  id="hero-team-select"
+                  bind:value={selectedTeam}
+                  class="w-full bg-blue-50/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-medium py-1.5 px-2 rounded-lg text-xs border border-blue-300 dark:border-blue-800 focus:outline-hidden cursor-pointer truncate"
+                >
+                  <option value="all">All Teams ({availableTeams.length})</option>
+                  {#each availableTeams as team}
+                    <option value={team}>{team}</option>
+                  {/each}
+                </select>
+              </div>
+            {/if}
+
+            <!-- Collection Filter -->
             <div>
               <label for="hero-collection-select" class="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
                 Collection
@@ -268,8 +293,8 @@
                 bind:value={selectedCollectionId}
                 class="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1.5 px-2 rounded-lg text-xs border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer truncate"
               >
-                <option value="all">All Collections</option>
-                {#each collections as c (c.id)}
+                <option value="all">All Collections ({filteredCollections.length})</option>
+                {#each filteredCollections as c (c.id)}
                   <option value={c.id}>{c.name}</option>
                 {/each}
               </select>
@@ -409,62 +434,52 @@
             </div>
           </div>
 
-          <!-- Scope / Organization Filter -->
-          <div class="flex items-center p-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 text-[11px]">
-            <button
-              type="button"
-              onclick={() => (scope = 'all')}
-              class="px-2 py-0.5 rounded transition-colors cursor-pointer {scope === 'all'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
+          <!-- Scope / Organization Filter (Selectable) -->
+          <div class="flex items-center gap-1 text-[11px]">
+            <label for="top-scope-select" class="text-neutral-400 dark:text-neutral-500 font-medium">Scope:</label>
+            <select
+              id="top-scope-select"
+              bind:value={scope}
+              class="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1 px-2 rounded-md text-[11px] border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer"
             >
-              All
-            </button>
-            <button
-              type="button"
-              onclick={() => (scope = 'mine')}
-              class="flex items-center gap-1 px-2 py-0.5 rounded transition-colors cursor-pointer {scope === 'mine'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-              title="Personal Scope"
-            >
-              <User class="w-3 h-3" />
-              <span>Personal</span>
-            </button>
-            <button
-              type="button"
-              onclick={() => (scope = 'team')}
-              class="flex items-center gap-1 px-2 py-0.5 rounded transition-colors cursor-pointer {scope === 'team'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-              title="Team Scope"
-            >
-              <Users class="w-3 h-3" />
-              <span>Team</span>
-            </button>
-            <button
-              type="button"
-              onclick={() => (scope = 'org')}
-              class="flex items-center gap-1 px-2 py-0.5 rounded transition-colors cursor-pointer {scope === 'org'
-                ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'}"
-              title="Organization Scope"
-            >
-              <Building2 class="w-3 h-3" />
-              <span>Org</span>
-            </button>
+              <option value="all">All Scopes</option>
+              <option value="mine">Personal</option>
+              <option value="team">Team</option>
+              <option value="org">Organization</option>
+            </select>
           </div>
 
+          <!-- Team Selector (appears when scope === 'team') -->
+          {#if scope === 'team'}
+            <div in:fly={{ x: -4, duration: 150 }} class="flex items-center gap-1 text-[11px]">
+              <label for="top-team-select" class="text-blue-600 dark:text-blue-400 font-medium">Team:</label>
+              <select
+                id="top-team-select"
+                bind:value={selectedTeam}
+                class="bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium py-1 px-2 rounded-md text-[11px] border border-blue-200 dark:border-blue-900/60 focus:outline-hidden cursor-pointer max-w-44 truncate"
+              >
+                <option value="all">All Teams ({availableTeams.length})</option>
+                {#each availableTeams as team}
+                  <option value={team}>{team}</option>
+                {/each}
+              </select>
+            </div>
+          {/if}
+
           <!-- Collection Filter -->
-          <select
-            bind:value={selectedCollectionId}
-            class="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1 px-2 rounded-md text-[11px] border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer max-w-36 truncate"
-          >
-            <option value="all">All Collections</option>
-            {#each collections as c (c.id)}
-              <option value={c.id}>{c.name}</option>
-            {/each}
-          </select>
+          <div class="flex items-center gap-1 text-[11px]">
+            <label for="top-collection-select" class="text-neutral-400 dark:text-neutral-500 font-medium">Collection:</label>
+            <select
+              id="top-collection-select"
+              bind:value={selectedCollectionId}
+              class="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1 px-2 rounded-md text-[11px] border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer max-w-36 truncate"
+            >
+              <option value="all">All Collections ({filteredCollections.length})</option>
+              {#each filteredCollections as c (c.id)}
+                <option value={c.id}>{c.name}</option>
+              {/each}
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -538,6 +553,10 @@
                 <!-- Metadata Breadcrumb Strip -->
                 <div class="flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-2 truncate">
                   <span class="font-medium text-neutral-600 dark:text-neutral-300">{col.name}</span>
+                  {#if col.scope === 'team' && col.teamName}
+                    <span>·</span>
+                    <span class="text-blue-600 dark:text-blue-400 font-medium">{col.teamName}</span>
+                  {/if}
                   <span>·</span>
                   <span class="font-mono text-neutral-600 dark:text-neutral-400">Page {chunk.pageNumber}</span>
                   {#if chunk.sectionHeading}
@@ -585,6 +604,11 @@
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60">
                     {col.name}
                   </span>
+                  {#if col.scope === 'team' && col.teamName}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/60">
+                      Team: {col.teamName}
+                    </span>
+                  {/if}
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
                     Page {chunk.pageNumber}
                   </span>
