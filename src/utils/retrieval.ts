@@ -41,6 +41,9 @@ export function executeChunkSearch(
     }
 
     // Filter by scope
+    if (options.scope === 'mine' && col.scope !== 'mine') {
+      continue;
+    }
     if (options.scope === 'team' && col.scope !== 'team') {
       continue;
     }

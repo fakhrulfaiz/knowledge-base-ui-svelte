@@ -139,7 +139,7 @@ export interface SearchResultChunk {
 
 export interface SearchQueryOptions {
   query: string;
-  scope: 'all' | 'team' | 'org';
+  scope: 'all' | 'mine' | 'team' | 'org';
   collectionId?: string;
   topK: number; // Retrieval depth (chunk count)
   minScoreThreshold?: number;
