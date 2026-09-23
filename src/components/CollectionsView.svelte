@@ -49,18 +49,14 @@
   );
 
   let searchQuery = $state('');
-  let sharedSubFilter = $state<'all-shared' | 'org' | 'team'>('all-shared');
   let sortBy = $state<'updated' | 'name' | 'docs'>('updated');
 
   let filteredCollections = $derived.by(() => {
     let result = collections.filter((col) => {
       // 1. Scope filter
       if (selectedScope === 'mine' && col.scope !== 'mine') return false;
-      if (selectedScope === 'org' && col.scope !== 'org') return false;
+      if (selectedScope === 'org' && col.scope === 'mine') return false;
       if (selectedScope === 'team' && col.scope !== 'team') return false;
-
-      // In 'Shared' general view, filter by sub-filter if set
-      if (selectedScope === 'org' && sharedSubFilter === 'team' && col.scope !== 'team') return false;
 
       // 2. Search query filter
       if (searchQuery.trim()) {
@@ -145,10 +141,7 @@
 
         <button
           type="button"
-          onclick={() => {
-            onSelectScope('org');
-            sharedSubFilter = 'all-shared';
-          }}
+          onclick={() => onSelectScope('org')}
           class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'org' || selectedScope === 'team'
             ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
             : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
@@ -168,49 +161,6 @@
           <span>All</span>
         </button>
       </div>
-
-      <!-- If inside Shared scope, show sub-groups toggle -->
-      {#if selectedScope === 'org' || selectedScope === 'team'}
-        <div class="flex items-center gap-1 text-xs">
-          <span class="text-neutral-400 dark:text-neutral-500 mr-1 text-[11px]">Sub-group:</span>
-          <button
-            type="button"
-            onclick={() => {
-              onSelectScope('org');
-              sharedSubFilter = 'all-shared';
-            }}
-            class="px-2.5 py-1 rounded text-xs transition-colors cursor-pointer {sharedSubFilter === 'all-shared'
-              ? 'bg-blue-600 text-white font-medium shadow-2xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'}"
-          >
-            All Shared
-          </button>
-          <button
-            type="button"
-            onclick={() => {
-              onSelectScope('org');
-              sharedSubFilter = 'org';
-            }}
-            class="px-2.5 py-1 rounded text-xs transition-colors cursor-pointer {selectedScope === 'org' && sharedSubFilter === 'org'
-              ? 'bg-blue-600 text-white font-medium shadow-2xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'}"
-          >
-            Organization
-          </button>
-          <button
-            type="button"
-            onclick={() => {
-              onSelectScope('team');
-              sharedSubFilter = 'team';
-            }}
-            class="px-2.5 py-1 rounded text-xs transition-colors cursor-pointer {selectedScope === 'team'
-              ? 'bg-blue-600 text-white font-medium shadow-2xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'}"
-          >
-            Team
-          </button>
-        </div>
-      {/if}
 
       <!-- Search & Sort -->
       <div class="flex items-center gap-2.5 ml-auto">
@@ -262,8 +212,8 @@
       </div>
     {:else}
       <div class="space-y-6">
-        <!-- If All scope or Shared all-shared, display with clear section hierarchy -->
-        {#if selectedScope === 'all' || (selectedScope === 'org' && sharedSubFilter === 'all-shared')}
+        <!-- If All scope or Shared, display with clear section hierarchy -->
+        {#if selectedScope === 'all' || selectedScope === 'org'}
           <!-- Organization Collections Group -->
           {#if orgCollections.length > 0}
             <div class="space-y-3">
