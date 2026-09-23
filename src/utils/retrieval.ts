@@ -145,10 +145,20 @@ export function executeChunkSearch(
     }
     const semanticScore = Math.min(1, (keywordOverlap / Math.max(1, queryTerms.length)) * 0.6 + exactPhraseBonus);
 
-    // Hybrid score
-    const finalScore = Math.min(0.99, Number((bm25Score * 0.65 + semanticScore * 0.35 + exactPhraseBonus).toFixed(3)));
+    // Score based on retrieval mode (hybrid, dense, lexical)
+    const mode = options.searchMode ?? 'hybrid';
+    let finalScore = 0;
+    if (mode === 'lexical') {
+      finalScore = Math.min(0.99, Number((bm25Score + exactPhraseBonus).toFixed(3)));
+    } else if (mode === 'dense') {
+      finalScore = Math.min(0.99, Number((semanticScore + exactPhraseBonus * 0.4).toFixed(3)));
+    } else {
+      // hybrid
+      finalScore = Math.min(0.99, Number((bm25Score * 0.65 + semanticScore * 0.35 + exactPhraseBonus).toFixed(3)));
+    }
 
-    if (finalScore >= (options.minScoreThreshold ?? 0.12)) {
+    const threshold = options.minScoreThreshold ?? (mode === 'dense' ? 0.08 : 0.12);
+    if (finalScore >= threshold) {
       scoredChunks.push({
         item,
         score: finalScore,

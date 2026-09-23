@@ -143,6 +143,7 @@ export interface SearchQueryOptions {
   collectionId?: string;
   topK: number; // Retrieval depth (chunk count)
   minScoreThreshold?: number;
+  searchMode?: 'hybrid' | 'dense' | 'lexical';
 }
 
 export interface IngestionConfig {
