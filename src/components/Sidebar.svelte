@@ -10,6 +10,7 @@
     Layers,
     ChevronDown,
     ChevronRight,
+    ChevronLeft,
     ShieldCheck,
     SlidersHorizontal,
     Shield,
@@ -56,6 +57,15 @@
     onToggleDarkMode,
   }: Props = $props();
 
+  // Responsive default: collapse on smaller screens, expanded on larger screens
+  function getInitialCollapsed(): boolean {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768;
+    }
+    return false;
+  }
+
+  let isCollapsed = $state(getInitialCollapsed());
   let sharedExpanded = $state(true);
 
   let mineCollections = $derived(collections.filter((c) => c.scope === 'mine'));
@@ -73,53 +83,73 @@
   let canCreate = $derived(canCreateCollection(currentUser));
 </script>
 
-<aside class="w-60 h-screen bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 flex flex-col shrink-0 border-r border-neutral-200 dark:border-neutral-800 select-none transition-colors">
-  <!-- Brand & Workspace Title -->
-  <div class="h-14 px-4 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
-    <div class="flex items-center gap-2.5">
-      <div class="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-        <Layers class="w-4 h-4 text-white" />
+<aside
+  class="h-screen bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 flex flex-col shrink-0 border-r border-neutral-200 dark:border-neutral-800 select-none transition-all duration-300 ease-in-out {isCollapsed ? 'w-16' : 'w-64 md:w-72'}"
+>
+  <!-- Brand & Workspace Title / Expand-Collapse Toggle -->
+  <div class="h-14 px-3 flex items-center {isCollapsed ? 'justify-center' : 'justify-between'} border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+    {#if !isCollapsed}
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+          <Layers class="w-4.5 h-4.5 text-white" />
+        </div>
+        <div class="font-semibold text-base text-neutral-900 dark:text-neutral-100 tracking-tight truncate">
+          Cognify Knowledge
+        </div>
       </div>
-      <div class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 tracking-tight">
-        Cognify Knowledge
-      </div>
-    </div>
 
-    {#if onToggleDarkMode}
       <button
         type="button"
-        onclick={onToggleDarkMode}
-        class="p-1.5 rounded-md text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-amber-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-        title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
-        aria-label="Toggle dark mode"
+        onclick={() => (isCollapsed = true)}
+        class="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
+        title="Collapse sidebar"
+        aria-label="Collapse sidebar"
       >
-        {#if isDarkMode}
-          <Sun class="w-4 h-4 text-amber-400" />
-        {:else}
-          <Moon class="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
-        {/if}
+        <ChevronLeft class="w-4.5 h-4.5" />
+      </button>
+    {:else}
+      <button
+        type="button"
+        onclick={() => (isCollapsed = false)}
+        class="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+        title="Expand sidebar"
+        aria-label="Expand sidebar"
+      >
+        <ChevronRight class="w-5 h-5" />
       </button>
     {/if}
   </div>
 
   <!-- New Collection Action -->
   {#if canCreate}
-    <div class="p-3 border-b border-neutral-100 dark:border-neutral-800/80">
-      <button
-        type="button"
-        onclick={onOpenNewCollection}
-        class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 text-xs font-medium rounded-lg shadow-xs transition-colors cursor-pointer"
-      >
-        <Plus class="w-4 h-4" />
-        <span>New Collection</span>
-      </button>
+    <div class="{isCollapsed ? 'p-2 flex justify-center' : 'p-3'} border-b border-neutral-100 dark:border-neutral-800/80 shrink-0">
+      {#if !isCollapsed}
+        <button
+          type="button"
+          onclick={onOpenNewCollection}
+          class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium rounded-xl shadow-xs transition-colors cursor-pointer"
+        >
+          <Plus class="w-4.5 h-4.5" />
+          <span>New Collection</span>
+        </button>
+      {:else}
+        <button
+          type="button"
+          onclick={onOpenNewCollection}
+          class="w-10 h-10 flex items-center justify-center bg-blue-600 text-white hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+          title="New Collection"
+          aria-label="New Collection"
+        >
+          <Plus class="w-5 h-5" />
+        </button>
+      {/if}
     </div>
   {/if}
 
   <!-- Navigation Sections -->
-  <div class="flex-1 overflow-y-auto p-2 space-y-4 text-xs">
+  <div class="flex-1 overflow-y-auto {isCollapsed ? 'p-2 space-y-3' : 'p-3 space-y-4'} text-sm">
     <!-- Top-Level Quick Links -->
-    <div class="space-y-0.5">
+    <div class="space-y-1">
       <!-- Home (Google Drive Style Landing) -->
       <button
         type="button"
@@ -127,13 +157,16 @@
           onSelectCollection(null);
           onSelectView('home');
         }}
-        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'home'
-          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold'
-          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'home'
+          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        title="Home"
       >
-        <div class="flex items-center gap-2.5">
-          <Home class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-          <span>Home</span>
+        <div class="flex items-center gap-3">
+          <Home class="w-4.5 h-4.5 {activeView === 'home' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
+          {#if !isCollapsed}
+            <span>Home</span>
+          {/if}
         </div>
       </button>
 
@@ -141,13 +174,16 @@
       <button
         type="button"
         onclick={() => onSelectView('search')}
-        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'search'
-          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
-          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'search'
+          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        title="Semantic Passage Search"
       >
-        <div class="flex items-center gap-2.5">
-          <Search class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-          <span>Search</span>
+        <div class="flex items-center gap-3">
+          <Search class="w-4.5 h-4.5 {activeView === 'search' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
+          {#if !isCollapsed}
+            <span>Search</span>
+          {/if}
         </div>
       </button>
 
@@ -159,17 +195,22 @@
           onSelectScope('all');
           onSelectView('collections');
         }}
-        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all'
-          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
-          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all'
+          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        title="All Collections"
       >
-        <div class="flex items-center gap-2.5">
-          <FolderKanban class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-          <span>All Collections</span>
+        <div class="flex items-center gap-3">
+          <FolderKanban class="w-4.5 h-4.5 {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
+          {#if !isCollapsed}
+            <span>All Collections</span>
+          {/if}
         </div>
-        <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-          {collections.length}
-        </span>
+        {#if !isCollapsed}
+          <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
+            {collections.length}
+          </span>
+        {/if}
       </button>
 
       <!-- Admin & Ingestion Engine (Governance Protected) -->
@@ -177,236 +218,326 @@
         <button
           type="button"
           onclick={() => onSelectView('admin')}
-          class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'admin'
+          class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'admin'
             ? 'bg-blue-600 text-white font-semibold shadow-2xs'
             : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
-          title="Resource allocations, ingestion parameters, token budgets, and corpus re-indexing"
+          title="Admin & Resources"
         >
-          <div class="flex items-center gap-2.5">
-            <SlidersHorizontal class="w-4 h-4 {activeView === 'admin' ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}" />
-            <span>Admin &amp; Resources</span>
+          <div class="flex items-center gap-3">
+            <SlidersHorizontal class="w-4.5 h-4.5 {activeView === 'admin' ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}" />
+            {#if !isCollapsed}
+              <span>Admin &amp; Resources</span>
+            {/if}
           </div>
-          {#if isOwnerOrAdmin}
-            <span
-              class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
-                ? 'bg-blue-800 text-emerald-300'
-                : 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'}"
-            >
-              ADMIN
-            </span>
-          {:else if isTeamLead}
-            <span
-              class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
-                ? 'bg-blue-800 text-blue-200'
-                : 'bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300'}"
-            >
-              LEAD
-            </span>
+          {#if !isCollapsed}
+            {#if isOwnerOrAdmin}
+              <span
+                class="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
+                  ? 'bg-blue-800 text-emerald-300'
+                  : 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'}"
+              >
+                ADMIN
+              </span>
+            {:else if isTeamLead}
+              <span
+                class="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
+                  ? 'bg-blue-800 text-blue-200'
+                  : 'bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300'}"
+              >
+                LEAD
+              </span>
+            {/if}
           {/if}
         </button>
       {/if}
     </div>
 
-    <!-- Scopes Divider -->
-    <div class="space-y-1 pt-1">
-      <div class="px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-        Scopes
-      </div>
+    <!-- Scopes Section -->
+    <div class="space-y-1 pt-2">
+      {#if !isCollapsed}
+        <div class="px-2 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+          Scopes
+        </div>
+      {/if}
 
       <!-- Personal Scope -->
       <button
         type="button"
         onclick={() => {
           onSelectView('collections');
-          onSelectScope('mine');
           onSelectCollection(null);
+          onSelectScope('mine');
         }}
-        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine'
-          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
-          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine'
+          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+        title="Personal Scope"
       >
-        <div class="flex items-center gap-2">
-          <User class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>Personal</span>
+        <div class="flex items-center gap-3">
+          <User class="w-4.5 h-4.5 {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
+          {#if !isCollapsed}
+            <span>Personal</span>
+          {/if}
         </div>
-        <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-          {mineCollections.length}
-        </span>
+        {#if !isCollapsed}
+          <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
+            {mineCollections.length}
+          </span>
+        {/if}
       </button>
 
-      <!-- Shared Header Toggle -->
-      <div class="pt-1">
-        <button
-          type="button"
-          onclick={() => (sharedExpanded = !sharedExpanded)}
-          class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 cursor-pointer"
-        >
-          <div class="flex items-center gap-2">
-            <Users class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
+      <!-- Shared Scopes Header / Team & Org Folders -->
+      <button
+        type="button"
+        onclick={() => {
+          if (!isCollapsed) {
+            sharedExpanded = !sharedExpanded;
+          } else {
+            onSelectView('collections');
+            onSelectCollection(null);
+            onSelectScope('team');
+          }
+        }}
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100"
+        title="Shared Knowledge (Team & Org)"
+      >
+        <div class="flex items-center gap-3">
+          <Users class="w-4.5 h-4.5 text-neutral-500 dark:text-neutral-400" />
+          {#if !isCollapsed}
             <span>Shared</span>
-          </div>
-          {#if sharedExpanded}
-            <ChevronDown class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
-          {:else}
-            <ChevronRight class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
           {/if}
-        </button>
-
-        {#if sharedExpanded}
-          <div class="pl-4 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 ml-3">
-            <!-- Organization -->
-            <button
-              type="button"
-              onclick={() => {
-                onSelectView('collections');
-                onSelectScope('org');
-                onSelectCollection(null);
-              }}
-              class="w-full flex items-center justify-between px-2 py-1 rounded text-xs transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'org'
-                ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}"
-            >
-              <div class="flex items-center gap-1.5 truncate">
-                <Building2 class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
-                <span>Organization</span>
-              </div>
-              <span class="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
-                {orgCollections.length}
-              </span>
-            </button>
-
-            <!-- Team -->
-            <button
-              type="button"
-              onclick={() => {
-                onSelectView('collections');
-                onSelectScope('team');
-                onSelectCollection(null);
-              }}
-              class="w-full flex items-center justify-between px-2 py-1 rounded text-xs transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'team'
-                ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-medium'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}"
-            >
-              <div class="flex items-center gap-1.5 truncate">
-                <Users class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
-                <span>Team</span>
-              </div>
-              <span class="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
-                {teamCollections.length}
-              </span>
-            </button>
+        </div>
+        {#if !isCollapsed}
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
+              {teamCollections.length + orgCollections.length}
+            </span>
+            {#if sharedExpanded}
+              <ChevronDown class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+            {:else}
+              <ChevronRight class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+            {/if}
           </div>
         {/if}
-      </div>
+      </button>
+
+      {#if sharedExpanded && !isCollapsed}
+        <!-- Shared Sub-items: Organization & Team -->
+        <div class="pl-4 space-y-0.5 pt-0.5">
+          <!-- Organization Sub-scope -->
+          <button
+            type="button"
+            onclick={() => {
+              onSelectView('collections');
+              onSelectCollection(null);
+              onSelectScope('org');
+            }}
+            class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'org'
+              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          >
+            <div class="flex items-center gap-2.5">
+              <Building2 class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+              <span>Organization</span>
+            </div>
+            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
+              {orgCollections.length}
+            </span>
+          </button>
+
+          <!-- Team Sub-scope -->
+          <button
+            type="button"
+            onclick={() => {
+              onSelectView('collections');
+              onSelectCollection(null);
+              onSelectScope('team');
+            }}
+            class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'team'
+              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          >
+            <div class="flex items-center gap-2.5">
+              <Users class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+              <span>Team</span>
+            </div>
+            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
+              {teamCollections.length}
+            </span>
+          </button>
+        </div>
+      {/if}
     </div>
 
     <!-- Collections Quick List -->
-    <div class="pt-2">
-      <div class="px-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">
-        Collections
+    {#if !isCollapsed}
+      <div class="pt-2">
+        <div class="px-2 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1.5">
+          Collections
+        </div>
+        <div class="space-y-0.5 max-h-48 overflow-y-auto">
+          {#each collections as col (col.id)}
+            {@const isSelected = selectedCollectionId === col.id}
+            <button
+              type="button"
+              onclick={() => onSelectCollection(col.id)}
+              class="w-full text-left px-3 py-1.5 rounded-lg text-sm truncate transition-colors cursor-pointer {isSelected
+                ? 'bg-blue-600 text-white font-medium shadow-2xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+            >
+              {col.name}
+            </button>
+          {/each}
+        </div>
       </div>
-      <div class="space-y-0.5 max-h-48 overflow-y-auto">
-        {#each collections as col (col.id)}
-          {@const isSelected = selectedCollectionId === col.id}
-          <button
-            type="button"
-            onclick={() => onSelectCollection(col.id)}
-            class="w-full text-left px-2 py-1.5 rounded-md text-xs truncate transition-colors cursor-pointer {isSelected
-              ? 'bg-blue-600 text-white font-medium shadow-2xs'
-              : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
-          >
-            {col.name}
-          </button>
-        {/each}
-      </div>
-    </div>
+    {/if}
   </div>
 
-  <!-- User Footer Profile & Role Switcher -->
-  <div class="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/90 space-y-2.5">
-    {#if currentUser.systemRole !== 'viewer'}
-      <!-- Personal Storage Quota Widget -->
-      <div class="p-2 bg-white dark:bg-neutral-800/90 rounded-lg border border-neutral-200 dark:border-neutral-700/80 space-y-1 shadow-2xs">
-        <div class="flex items-center justify-between text-[10px]">
-          <span class="font-semibold text-neutral-600 dark:text-neutral-300 flex items-center gap-1">
-            <HardDrive class="w-3 h-3 text-blue-600 dark:text-blue-400" />
-            <span>Personal Storage</span>
-          </span>
-          <span class="font-mono text-neutral-500 dark:text-neutral-400 tabular-nums">
-            {formatBytes(personalUsedBytes)} / {personalCapGb} GB
-          </span>
-        </div>
-        <div class="w-full bg-neutral-100 dark:bg-neutral-700 h-1.5 rounded-full overflow-hidden">
-          <div
-            class="h-full transition-all duration-300 {personalPercent > 90 ? 'bg-rose-500' : 'bg-blue-600'}"
-            style="width: {Math.max(2, personalPercent)}%"
-          ></div>
-        </div>
-      </div>
-    {:else}
-      <div class="p-2 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[10px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-        <Lock class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
-        <span>Read-Only Viewer Account</span>
-      </div>
-    {/if}
-
-    {#if canAdmin}
-      <button
-        type="button"
-        onclick={() => onSelectView('admin')}
-        class="w-full flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/60 p-1.5 rounded-md transition-colors text-left"
-        title="Click to open Admin & Resource Governance"
-      >
-        <div class="min-w-0">
-          <div class="font-semibold text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
-            <span>{currentUser.name}</span>
+  <!-- User Footer Area: Storage Quota -> Dark/Light Toggle -> User Profile -->
+  <div class="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/90 space-y-2.5 shrink-0">
+    <!-- 1. Storage Widget -->
+    {#if !isCollapsed}
+      {#if currentUser.systemRole !== 'viewer'}
+        <!-- Personal Storage Quota Widget -->
+        <div class="p-2.5 bg-white dark:bg-neutral-800/90 rounded-xl border border-neutral-200 dark:border-neutral-700/80 space-y-1.5 shadow-2xs">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+              <HardDrive class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Personal Storage</span>
+            </span>
+            <span class="font-mono text-neutral-500 dark:text-neutral-400 text-xs tabular-nums">
+              {formatBytes(personalUsedBytes)} / {personalCapGb} GB
+            </span>
           </div>
-          <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
-            {currentUser.role}
+          <div class="w-full bg-neutral-100 dark:bg-neutral-700 h-1.5 rounded-full overflow-hidden">
+            <div
+              class="h-full transition-all duration-300 {personalPercent > 90 ? 'bg-rose-500' : 'bg-blue-600'}"
+              style="width: {Math.max(2, personalPercent)}%"
+            ></div>
           </div>
         </div>
-        <span title="Role: {currentUser.systemRole.toUpperCase()}">
-          {#if isOwnerOrAdmin}
-            <ShieldCheck class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          {:else if isTeamLead}
-            <Shield class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-          {:else}
-            <User class="w-4 h-4 text-neutral-400 dark:text-neutral-500 shrink-0" />
-          {/if}
-        </span>
-      </button>
-    {:else}
-      <div class="w-full flex items-center justify-between text-xs p-1.5 rounded-md text-left">
-        <div class="min-w-0">
-          <div class="font-semibold text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
-            <span>{currentUser.name}</span>
-          </div>
-          <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
-            {currentUser.role}
-          </div>
+      {:else}
+        <div class="p-2.5 bg-neutral-100 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-2">
+          <Lock class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
+          <span>Read-Only Viewer Account</span>
         </div>
-        <span title="Role: {currentUser.systemRole.toUpperCase()}">
-          <User class="w-4 h-4 text-neutral-400 dark:text-neutral-500 shrink-0" />
-        </span>
-      </div>
-    {/if}
-
-    <!-- Quick RBAC Switcher & Theme Pill -->
-    <div class="pt-1 flex items-center justify-between gap-1 text-[10px]">
-      <span class="text-neutral-400 dark:text-neutral-500">Access:</span>
-      {#if onChangeUserRole}
-        <select
-          value={currentUser.systemRole}
-          onchange={(e) => onChangeUserRole((e.currentTarget as HTMLSelectElement).value as SystemRole)}
-          class="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded px-1.5 py-0.5 text-[10px] font-mono font-medium text-neutral-800 dark:text-neutral-200 cursor-pointer focus:outline-hidden focus:border-blue-500"
-        >
-          <option value="owner">owner (full)</option>
-          <option value="admin">admin</option>
-          <option value="team_lead">team lead</option>
-          <option value="member">member</option>
-          <option value="viewer">viewer</option>
-        </select>
       {/if}
-    </div>
+    {:else}
+      <div
+        class="w-10 h-10 mx-auto flex items-center justify-center rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 cursor-default"
+        title="Personal Storage: {formatBytes(personalUsedBytes)} / {personalCapGb} GB ({personalPercent}%)"
+      >
+        <HardDrive class="w-4.5 h-4.5 text-blue-600 dark:text-blue-400" />
+      </div>
+    {/if}
+
+    <!-- 2. Dark/Light Mode Toggle (Placed directly BETWEEN Storage and User Name) -->
+    {#if onToggleDarkMode}
+      {#if !isCollapsed}
+        <button
+          type="button"
+          onclick={onToggleDarkMode}
+          class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-neutral-800/90 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-xs font-medium text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer shadow-2xs"
+          title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
+        >
+          <div class="flex items-center gap-2">
+            {#if isDarkMode}
+              <Sun class="w-4 h-4 text-amber-400" />
+              <span>Light Mode</span>
+            {:else}
+              <Moon class="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+              <span>Dark Mode</span>
+            {/if}
+          </div>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 uppercase">
+            {isDarkMode ? 'Dark' : 'Light'}
+          </span>
+        </button>
+      {:else}
+        <button
+          type="button"
+          onclick={onToggleDarkMode}
+          class="w-10 h-10 mx-auto flex items-center justify-center rounded-xl bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+          title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
+          aria-label="Toggle dark mode"
+        >
+          {#if isDarkMode}
+            <Sun class="w-4.5 h-4.5 text-amber-400" />
+          {:else}
+            <Moon class="w-4.5 h-4.5 text-neutral-600 dark:text-neutral-400" />
+          {/if}
+        </button>
+      {/if}
+    {/if}
+
+    <!-- 3. User Name, Role & Access Switcher -->
+    {#if !isCollapsed}
+      {#if canAdmin}
+        <button
+          type="button"
+          onclick={() => onSelectView('admin')}
+          class="w-full flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/60 p-2 rounded-xl transition-colors text-left"
+          title="Click to open Admin & Resource Governance"
+        >
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
+              <span>{currentUser.name}</span>
+            </div>
+            <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+              {currentUser.role}
+            </div>
+          </div>
+          <span title="Role: {currentUser.systemRole.toUpperCase()}">
+            {#if isOwnerOrAdmin}
+              <ShieldCheck class="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            {:else if isTeamLead}
+              <Shield class="w-4.5 h-4.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            {:else}
+              <User class="w-4.5 h-4.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
+            {/if}
+          </span>
+        </button>
+      {:else}
+        <div class="w-full flex items-center justify-between text-xs p-2 rounded-xl text-left">
+          <div class="min-w-0">
+            <div class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
+              <span>{currentUser.name}</span>
+            </div>
+            <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+              {currentUser.role}
+            </div>
+          </div>
+          <span title="Role: {currentUser.systemRole.toUpperCase()}">
+            <User class="w-4.5 h-4.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
+          </span>
+        </div>
+      {/if}
+
+      <!-- Quick RBAC Switcher -->
+      <div class="pt-0.5 flex items-center justify-between gap-1 text-xs">
+        <span class="text-neutral-400 dark:text-neutral-500 font-medium">Access:</span>
+        {#if onChangeUserRole}
+          <select
+            value={currentUser.systemRole}
+            onchange={(e) => onChangeUserRole((e.currentTarget as HTMLSelectElement).value as SystemRole)}
+            class="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-2 py-0.5 text-xs font-mono font-medium text-neutral-800 dark:text-neutral-200 cursor-pointer focus:outline-hidden focus:border-blue-500"
+          >
+            <option value="owner">owner (full)</option>
+            <option value="admin">admin</option>
+            <option value="team_lead">team lead</option>
+            <option value="member">member</option>
+            <option value="viewer">viewer</option>
+          </select>
+        {/if}
+      </div>
+    {:else}
+      <!-- Collapsed User Avatar -->
+      <div
+        class="w-10 h-10 mx-auto rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center justify-center border-2 border-blue-500/40 cursor-default"
+        title="{currentUser.name} ({currentUser.role} · {currentUser.systemRole.toUpperCase()})"
+      >
+        {currentUser.avatarText || 'ER'}
+      </div>
+    {/if}
   </div>
 </aside>
