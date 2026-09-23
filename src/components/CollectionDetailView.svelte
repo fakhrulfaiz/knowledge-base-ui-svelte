@@ -244,37 +244,42 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <div class="text-xs text-neutral-400 dark:text-neutral-500">
-            {filteredDocs.length} items
-          </div>
+          <span class="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+            {filteredDocs.length} {filteredDocs.length === 1 ? 'file' : 'files'}
+          </span>
 
-          <!-- List / Grid (Raster Preview) Switcher -->
-          <div class="flex items-center p-0.5 bg-white dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700">
-            <button
-              type="button"
-              onclick={() => (viewMode = 'list')}
-              class="p-1 rounded text-xs transition-colors cursor-pointer {viewMode === 'list'
-                ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-medium'
-                : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
-              title="Table List View"
-            >
-              <LayoutList class="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onclick={() => (viewMode = 'grid')}
-              class="p-1 rounded text-xs transition-colors cursor-pointer {viewMode === 'grid'
-                ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-medium'
-                : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
-              title="Grid View (PDF Page Previews)"
-            >
-              <LayoutGrid class="w-3.5 h-3.5" />
-            </button>
+          <!-- View Format Switcher -->
+          <div class="flex items-center gap-1.5 text-xs">
+            <span class="text-neutral-500 dark:text-neutral-400 font-medium text-[11px]">Format:</span>
+            <div class="flex items-center p-0.5 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
+              <button
+                type="button"
+                onclick={() => (viewMode = 'list')}
+                class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-colors cursor-pointer {viewMode === 'list'
+                  ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+                title="View files in table list format"
+              >
+                <LayoutList class="w-3.5 h-3.5" />
+                <span>List</span>
+              </button>
+              <button
+                type="button"
+                onclick={() => (viewMode = 'grid')}
+                class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-colors cursor-pointer {viewMode === 'grid'
+                  ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+                title="View files as visual preview boxes"
+              >
+                <LayoutGrid class="w-3.5 h-3.5" />
+                <span>Preview</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Document Content: List Table or PDF Raster Grid -->
+      <!-- Document Content: List Table or Enterprise Preview Boxes -->
       <div class="flex-1 overflow-y-auto p-6">
         {#if filteredDocs.length === 0}
           <div class="h-60 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-neutral-900">
@@ -307,12 +312,12 @@
             <table class="w-full text-left text-xs">
               <thead class="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-medium">
                 <tr>
-                  <th class="py-2.5 px-4">Title</th>
+                  <th class="py-2.5 px-4">Document Title</th>
+                  <th class="py-2.5 px-3">Format</th>
                   <th class="py-2.5 px-3">Source</th>
-                  <th class="py-2.5 px-3 text-right">Pages</th>
                   <th class="py-2.5 px-3 text-right">Size</th>
-                  <th class="py-2.5 px-3">Uploaded</th>
-                  <th class="py-2.5 px-4 text-right">Actions</th>
+                  <th class="py-2.5 px-3">Date Added</th>
+                  <th class="py-2.5 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -327,32 +332,33 @@
                           {doc.fileType}
                         </span>
                         <div class="min-w-0">
-                          <div class="font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
+                          <div class="font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 text-sm">
                             {doc.title}
                           </div>
-                          <div class="text-[11px] text-neutral-400 dark:text-neutral-500 line-clamp-1 mt-0.5">
+                          <div class="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
                             {doc.summary}
                           </div>
                         </div>
                       </div>
                     </td>
 
+                    <td class="py-3 px-3 text-neutral-600 dark:text-neutral-400 uppercase font-mono text-[11px] whitespace-nowrap">
+                      {doc.fileType}
+                    </td>
+
                     <td class="py-3 px-3 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                      {doc.source === 'drive' ? 'Drive' : 'Upload'}
+                      {doc.source === 'drive' ? 'Google Drive' : 'Direct Upload'}
                     </td>
 
                     <td class="py-3 px-3 text-right font-mono tabular-nums text-neutral-600 dark:text-neutral-300">
-                      {doc.pageCount}
-                    </td>
-
-                    <td class="py-3 px-3 text-right font-mono tabular-nums text-neutral-500 dark:text-neutral-400">
                       {formatBytes(doc.sizeBytes)}
                     </td>
 
-                    <td class="py-3 px-3 text-neutral-400 dark:text-neutral-500 whitespace-nowrap">
+                    <td class="py-3 px-3 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                       {new Date(doc.uploadedAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
+                        year: 'numeric',
                       })}
                     </td>
 
@@ -361,9 +367,9 @@
                         <button
                           type="button"
                           onclick={() => onOpenDocument(doc, 1)}
-                          class="px-2.5 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                          class="px-2.5 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded transition-colors flex items-center gap-1 cursor-pointer"
                         >
-                          <span>Read</span>
+                          <span>Open</span>
                           <ExternalLink class="w-3 h-3" />
                         </button>
 
@@ -385,8 +391,8 @@
             </table>
           </div>
         {:else}
-          <!-- Grid View with PDF Raster Page Previews -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Grid View with Enterprise Document Preview Boxes -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {#each filteredDocs as doc (doc.id)}
               {@const firstPageText = doc.pages[0]?.chunks[0]?.snippet || doc.summary}
               <div
@@ -394,9 +400,9 @@
                 tabindex="0"
                 onclick={() => onOpenDocument(doc, 1)}
                 onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDocument(doc, 1); }}
-                class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group overflow-hidden"
+                class="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group overflow-hidden"
               >
-                <!-- Miniature Raster Page 1 Preview -->
+                <!-- Enterprise Document Box Preview -->
                 <DocumentGridCardPreview
                   title={doc.title}
                   fileType={doc.fileType}
@@ -405,27 +411,29 @@
                 />
 
                 <!-- Card Content Footer -->
-                <div class="p-3.5 space-y-2 bg-white dark:bg-neutral-900 flex-1 flex flex-col justify-between">
+                <div class="p-4 space-y-3 bg-white dark:bg-neutral-900 flex-1 flex flex-col justify-between">
                   <div>
-                    <div class="flex items-center justify-between text-[11px] text-neutral-400 dark:text-neutral-500 mb-1">
-                      <span class="font-mono">{doc.fileType.toUpperCase()}</span>
-                      <span>{formatBytes(doc.sizeBytes)}</span>
+                    <div class="flex items-center justify-between text-xs text-neutral-400 dark:text-neutral-500 mb-1.5">
+                      <span class="font-mono font-semibold text-neutral-600 dark:text-neutral-300 uppercase">
+                        {doc.fileType}
+                      </span>
+                      <span class="font-mono">{formatBytes(doc.sizeBytes)}</span>
                     </div>
-                    <h4 class="text-xs font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-2">
+                    <h4 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-2 transition-colors">
                       {doc.title}
                     </h4>
-                    <p class="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-1">
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-1.5 leading-relaxed">
                       {doc.summary}
                     </p>
                   </div>
 
-                  <div class="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
+                  <div class="pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
                     <span class="text-[11px] text-neutral-400 dark:text-neutral-500">
-                      {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'}
+                      Added {new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
-                    <span class="text-xs font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-neutral-100 flex items-center gap-1">
-                      <span>Open PDF</span>
-                      <ExternalLink class="w-3 h-3" />
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 group-hover:bg-blue-600 group-hover:text-white text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-colors">
+                      <span>Open Document</span>
+                      <ExternalLink class="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </div>
