@@ -17,15 +17,11 @@
     Cpu,
     X,
     Filter,
-    Upload,
-    Loader2,
-    CheckCircle2,
-    Paperclip
+    Loader2
   } from '@lucide/svelte';
   import { fade, fly } from 'svelte/transition';
   import type { Collection, DocumentItem, DocumentPage } from '../types';
   import { executeChunkSearch } from '../utils/retrieval';
-  import { chunkTextIntoPages } from '../utils/chunker';
   import { SAMPLE_SEARCH_QUERIES } from '../data/mockData';
   import HighlightedSnippet from './HighlightedSnippet.svelte';
   import PdfPageThumbnail from './PdfPageThumbnail.svelte';
@@ -34,10 +30,9 @@
     documents: DocumentItem[];
     collections: Collection[];
     onOpenCitation: (doc: DocumentItem, pageNumber: number, chunkId: string) => void;
-    onUploadDocument?: (doc: DocumentItem) => boolean | void;
   }
 
-  let { documents, collections, onOpenCitation, onUploadDocument }: Props = $props();
+  let { documents, collections, onOpenCitation }: Props = $props();
 
   let query = $state('');
   let hasSearched = $state(false);
@@ -48,11 +43,6 @@
   let selectedCollectionId = $state<string>('all');
   let resultLimit = $state<number>(10);
   let selectedChunkId = $state<string | null>(null);
-
-  // File upload state
-  let fileInputRef = $state<HTMLInputElement | null>(null);
-  let isUploading = $state(false);
-  let uploadMessage = $state<string | null>(null);
 
   // Extract all distinct team names from collections
   let availableTeams = $derived(
@@ -147,109 +137,7 @@
     isSearching = false;
     selectedChunkId = null;
   }
-
-  async function handleFileUpload(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    isUploading = true;
-    uploadMessage = `Reading and extracting "${file.name}"...`;
-
-    try {
-      let fileText = '';
-      if (file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-        fileText = await file.text();
-      } else {
-        fileText = `# ${file.name.replace(/\.[^/.]+$/, '')}
-Enterprise architecture specification and technical implementation details extracted from uploaded ${file.name}.
-
-## 1. System Topology & Security Requirements
-All service endpoints must enforce bidirectional authentication with cryptographic identity assertions. Microservices operate within isolated network segments with zero implicit trust.
-
-## 2. Token Boundaries & Data Storage
-Token life cycles are strictly bounded to 3600 seconds. Data encryption at rest uses AES-256-GCM with hardware-backed key rotation.`;
-      }
-
-      await new Promise((r) => setTimeout(r, 400));
-      uploadMessage = `Chunking into token windows and generating embeddings...`;
-      await new Promise((r) => setTimeout(r, 400));
-
-      const targetCol =
-        (selectedCollectionId !== 'all' ? collections.find((c) => c.id === selectedCollectionId) : null) ||
-        filteredCollections[0] ||
-        collections[0];
-
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
-      const docFileType: 'pdf' | 'docx' | 'md' | 'report' =
-        fileExt === 'pdf' ? 'pdf' : fileExt === 'docx' ? 'docx' : fileExt === 'md' ? 'md' : 'report';
-
-      const newDocId = `doc-upload-${Date.now()}`;
-      const rawPages = [
-        {
-          pageNumber: 1,
-          header: '1. Executive Overview & Architecture',
-          content: fileText.slice(0, 800) || `${file.name} document content`,
-        },
-        {
-          pageNumber: 2,
-          header: '2. Technical Specifications & Security Controls',
-          content: fileText.length > 800 ? fileText.slice(800, 1600) : 'Additional policy and compliance specifications.',
-        },
-      ];
-
-      const chunkedPages = chunkTextIntoPages(newDocId, targetCol.id, targetCol.scope, rawPages);
-      const totalChunks = chunkedPages.reduce((acc, p) => acc + p.chunks.length, 0);
-
-      const newDoc: DocumentItem = {
-        id: newDocId,
-        collectionId: targetCol.id,
-        title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
-        filename: file.name,
-        fileType: docFileType,
-        source: 'upload',
-        uploadedAt: new Date().toISOString(),
-        uploadedBy: 'Elena Rostova',
-        sizeBytes: file.size || 145000,
-        pageCount: rawPages.length,
-        chunkCount: totalChunks,
-        summary: `Uploaded document ${file.name} with ${totalChunks} chunks indexed into ${targetCol.name}.`,
-        entities: ['Enterprise Architecture', 'Uploaded Spec', targetCol.name],
-        crossReferences: [],
-        semanticTopics: ['Uploaded Document', 'Ingestion', targetCol.scope],
-        pages: chunkedPages,
-      };
-
-      if (onUploadDocument) {
-        onUploadDocument(newDoc);
-      }
-
-      uploadMessage = `✓ Ingested "${file.name}" (${totalChunks} chunks) into ${targetCol.name}!`;
-
-      setTimeout(() => {
-        isUploading = false;
-        uploadMessage = null;
-        query = newDoc.title;
-        handleExecuteSearch();
-      }, 1000);
-    } catch {
-      isUploading = false;
-      uploadMessage = null;
-    } finally {
-      input.value = '';
-    }
-  }
 </script>
-
-<!-- Hidden File Input for Document Ingestion -->
-<input
-  type="file"
-  bind:this={fileInputRef}
-  onchange={handleFileUpload}
-  accept=".pdf,.docx,.md,.txt"
-  class="hidden"
-  id="search-file-upload-input"
-/>
 
 <div class="flex-1 flex flex-col h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors">
   <!-- Top Navigation Header -->
@@ -320,16 +208,6 @@ Token life cycles are strictly bounded to 3600 seconds. Data encryption at rest 
             </button>
           {/if}
 
-          <!-- Upload / Attach File Button -->
-          <button
-            type="button"
-            onclick={() => fileInputRef?.click()}
-            class="p-2 text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-xl transition-colors cursor-pointer"
-            title="Upload file to index (.pdf, .docx, .md, .txt)"
-          >
-            <Upload class="w-4 h-4" />
-          </button>
-
           <!-- Primary Search Button -->
           <button
             type="button"
@@ -346,14 +224,6 @@ Token life cycles are strictly bounded to 3600 seconds. Data encryption at rest 
             {/if}
           </button>
         </div>
-
-        <!-- Ingestion Progress / Notification Banner -->
-        {#if isUploading && uploadMessage}
-          <div in:fade={{ duration: 150 }} class="p-3 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-xl text-xs flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300">
-            <Loader2 class="w-4 h-4 animate-spin shrink-0" />
-            <span class="font-medium">{uploadMessage}</span>
-          </div>
-        {/if}
 
         <!-- Accessible Direct Controls Strip -->
         <div class="p-3.5 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-3 text-left">
@@ -473,19 +343,8 @@ Token life cycles are strictly bounded to 3600 seconds. Data encryption at rest 
           </div>
         </div>
 
-        <!-- Quick Query Suggestion Pills & Upload Action Prompt -->
+        <!-- Quick Query Suggestion Pills -->
         <div class="pt-2 text-center space-y-3">
-          <div class="flex items-center justify-center gap-2">
-            <button
-              type="button"
-              onclick={() => fileInputRef?.click()}
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-blue-500 dark:hover:border-blue-500 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 text-xs font-medium transition-all shadow-2xs hover:shadow-xs cursor-pointer"
-            >
-              <Upload class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Upload Document (.pdf, .docx, .md, .txt)</span>
-            </button>
-          </div>
-
           <div class="text-[11px] text-neutral-400 dark:text-neutral-500 flex items-center justify-center gap-1.5">
             <Sparkles class="w-3.5 h-3.5 text-amber-500" />
             <span>Try searching:</span>
@@ -535,16 +394,6 @@ Token life cycles are strictly bounded to 3600 seconds. Data encryption at rest 
             </button>
           {/if}
 
-          <!-- Attach / Upload Button in Top Bar -->
-          <button
-            type="button"
-            onclick={() => fileInputRef?.click()}
-            class="p-1.5 text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 rounded cursor-pointer transition-colors"
-            title="Upload file to index (.pdf, .docx, .md, .txt)"
-          >
-            <Upload class="w-3.5 h-3.5" />
-          </button>
-
           <!-- Search Button in Top Bar -->
           <button
             type="button"
@@ -570,14 +419,6 @@ Token life cycles are strictly bounded to 3600 seconds. Data encryption at rest 
           {/if}
         </div>
       </div>
-
-      <!-- Ingestion Notification in Top Bar -->
-      {#if isUploading && uploadMessage}
-        <div in:fade={{ duration: 150 }} class="p-2 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 rounded-lg text-xs flex items-center gap-2 text-blue-700 dark:text-blue-300">
-          <Loader2 class="w-3.5 h-3.5 animate-spin shrink-0" />
-          <span>{uploadMessage}</span>
-        </div>
-      {/if}
 
       <!-- Bottom Row: Accessible Filter Strip -->
       <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
