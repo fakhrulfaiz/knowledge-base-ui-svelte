@@ -107,41 +107,43 @@
 
 <div class="flex-1 flex flex-col h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors">
   <!-- Top Header Bar -->
-  <div class="h-14 px-6 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between shrink-0">
-    <div class="flex items-center gap-2 text-xs">
+  <div class="min-h-14 py-2 px-3 sm:px-6 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-wrap items-center justify-between gap-2 shrink-0">
+    <div class="flex items-center gap-1.5 sm:gap-2 text-xs min-w-0">
       <button
         type="button"
         onclick={onBack}
-        class="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
+        class="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer shrink-0"
       >
         <ArrowLeft class="w-4 h-4" />
         <span>Collections</span>
       </button>
-      <ChevronRight class="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-700" />
-      <span class="text-neutral-400 dark:text-neutral-500">{scopeLabel}</span>
-      <ChevronRight class="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-700" />
-      <span class="font-semibold text-neutral-900 dark:text-neutral-100 truncate max-w-xs">{collection.name}</span>
+      <ChevronRight class="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-700 shrink-0" />
+      <span class="text-neutral-400 dark:text-neutral-500 truncate max-w-[80px] sm:max-w-none">{scopeLabel}</span>
+      <ChevronRight class="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-700 shrink-0" />
+      <span class="font-semibold text-neutral-900 dark:text-neutral-100 truncate max-w-[130px] sm:max-w-xs">{collection.name}</span>
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
       {#if canUpload}
         <button
           type="button"
           onclick={onOpenDriveModal}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
         >
           <HardDrive class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>Upload from Drive</span>
+          <span class="hidden sm:inline">Upload from Drive</span>
+          <span class="sm:hidden">Drive</span>
         </button>
 
         <button
           type="button"
           onclick={onOpenUploadModal}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
         >
           <Upload class="w-3.5 h-3.5" />
-          <span>Upload Document</span>
+          <span class="hidden sm:inline">Upload Document</span>
+          <span class="sm:hidden">Upload</span>
         </button>
       {:else}
         <div class="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 text-xs rounded-md">
@@ -153,10 +155,10 @@
   </div>
 
   <!-- Collection Header -->
-  <div class="px-6 py-4 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
-    <div class="flex items-start justify-between gap-4">
+  <div class="px-4 sm:px-6 py-3 sm:py-4 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
       <div>
-        <h1 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
+        <h1 class="text-base sm:text-lg font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
           {collection.name}
         </h1>
         <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
@@ -170,18 +172,18 @@
         </div>
 
         <!-- Storage Quota Bar -->
-        <div class="mt-3 flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+        <div class="mt-2.5 flex flex-wrap items-center gap-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-800">
           <div class="flex items-center gap-2 text-xs">
             <span class="font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
               <HardDrive class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Storage Quota:</span>
             </span>
-            <span class="font-mono text-neutral-600 dark:text-neutral-400">
+            <span class="font-mono text-neutral-600 dark:text-neutral-400 text-[11px] sm:text-xs">
               <strong class="text-neutral-900 dark:text-neutral-100">{formatBytes(usedBytes)}</strong> / {allocatedGb} GB used ({usedPercent}%)
             </span>
           </div>
 
-          <div class="w-28 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden border border-neutral-200 dark:border-neutral-600">
+          <div class="w-24 sm:w-28 h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden border border-neutral-200 dark:border-neutral-600">
             <div
               class="h-full transition-all duration-300 {usedPercent > 90 ? 'bg-rose-500' : 'bg-blue-600'}"
               style="width: {Math.max(2, usedPercent)}%"
@@ -192,7 +194,7 @@
             <button
               type="button"
               onclick={() => onOpenTeamAllocationModal(targetTeam)}
-              class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 ml-auto cursor-pointer"
+              class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 sm:ml-auto cursor-pointer"
             >
               <Sliders class="w-3 h-3" />
               <span>Manage Team Quotas ({targetTeam.teamName})</span>
@@ -232,30 +234,30 @@
   {#if activeTab === 'documents'}
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Search bar & View Mode Switcher inside collection -->
-      <div class="px-6 py-2.5 bg-neutral-100/70 dark:bg-neutral-900/60 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-4 shrink-0">
-        <div class="relative">
+      <div class="px-3 sm:px-6 py-2 bg-neutral-100/70 dark:bg-neutral-900/60 border-b border-neutral-200 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+        <div class="relative flex-1 sm:flex-initial min-w-[180px]">
           <Search class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Filter documents..."
             bind:value={docSearchQuery}
-            class="pl-8 pr-3 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500 w-64"
+            class="pl-8 pr-3 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500 w-full sm:w-64"
           />
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 sm:gap-3">
           <span class="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
             {filteredDocs.length} {filteredDocs.length === 1 ? 'file' : 'files'}
           </span>
 
           <!-- View Format Switcher -->
-          <div class="flex items-center gap-1.5 text-xs">
-            <span class="text-neutral-500 dark:text-neutral-400 font-medium text-[11px]">Format:</span>
+          <div class="flex items-center gap-1 text-xs">
+            <span class="text-neutral-500 dark:text-neutral-400 font-medium text-[11px] hidden sm:inline">Format:</span>
             <div class="flex items-center p-0.5 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
               <button
                 type="button"
                 onclick={() => (viewMode = 'list')}
-                class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-colors cursor-pointer {viewMode === 'list'
+                class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md text-xs transition-colors cursor-pointer {viewMode === 'list'
                   ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
                 title="View files in table list format"
@@ -266,7 +268,7 @@
               <button
                 type="button"
                 onclick={() => (viewMode = 'grid')}
-                class="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-colors cursor-pointer {viewMode === 'grid'
+                class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-md text-xs transition-colors cursor-pointer {viewMode === 'grid'
                   ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
                 title="View files as visual preview boxes"
@@ -280,7 +282,7 @@
       </div>
 
       <!-- Document Content: List Table or Enterprise Preview Boxes -->
-      <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex-1 overflow-y-auto p-3 sm:p-6 custom-scrollbar">
         {#if filteredDocs.length === 0}
           <div class="h-60 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-neutral-900">
             <FileText class="w-8 h-8 text-neutral-300 dark:text-neutral-600 mb-2" />
@@ -308,16 +310,16 @@
             {/if}
           </div>
         {:else if viewMode === 'list'}
-          <div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-2xs">
-            <table class="w-full text-left text-xs">
+          <div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-x-auto custom-scrollbar shadow-2xs">
+            <table class="w-full min-w-[620px] md:min-w-full text-left text-xs">
               <thead class="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-medium">
                 <tr>
-                  <th class="py-2.5 px-4">Document Title</th>
-                  <th class="py-2.5 px-3">Status</th>
-                  <th class="py-2.5 px-3">Source</th>
-                  <th class="py-2.5 px-3 text-right">Size</th>
-                  <th class="py-2.5 px-3">Date Added</th>
-                  <th class="py-2.5 px-4 text-right">Action</th>
+                  <th class="py-2.5 px-3 sm:px-4">Document Title</th>
+                  <th class="py-2.5 px-2 sm:px-3">Status</th>
+                  <th class="py-2.5 px-2 sm:px-3 hidden md:table-cell">Source</th>
+                  <th class="py-2.5 px-2 sm:px-3 text-right hidden sm:table-cell">Size</th>
+                  <th class="py-2.5 px-2 sm:px-3 hidden lg:table-cell">Date Added</th>
+                  <th class="py-2.5 px-2 sm:px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -326,47 +328,54 @@
                     class="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40 transition-colors group cursor-pointer"
                     onclick={() => onOpenDocument(doc, 1)}
                   >
-                    <td class="py-3 px-4">
-                      <div class="flex items-start gap-2.5">
-                        <span class="p-1 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 font-mono text-[10px] uppercase font-semibold mt-0.5">
+                    <td class="py-2.5 px-3 sm:px-4 max-w-[170px] sm:max-w-xs md:max-w-sm lg:max-w-md">
+                      <div class="flex items-start gap-2 sm:gap-2.5 min-w-0">
+                        <span class="p-1 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 font-mono text-[10px] uppercase font-semibold mt-0.5 shrink-0">
                           {doc.fileType}
                         </span>
-                        <div class="min-w-0">
-                          <div class="font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 text-sm">
+                        <div class="min-w-0 flex-1">
+                          <div
+                            class="font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate text-xs sm:text-sm"
+                            title={doc.title}
+                          >
                             {doc.title}
                           </div>
-                          <div class="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                          <div
+                            class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5"
+                            title={doc.summary}
+                          >
                             {doc.summary}
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    <td class="py-3 px-3 whitespace-nowrap">
-                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        <span>Ingested ({doc.chunkCount} chunks)</span>
+                    <td class="py-2.5 px-2 sm:px-3 whitespace-nowrap">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        <span class="hidden sm:inline">Ingested ({doc.chunkCount} chunks)</span>
+                        <span class="sm:hidden">Ingested ({doc.chunkCount}c)</span>
                       </span>
                     </td>
 
-                    <td class="py-3 px-3 text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                    <td class="py-2.5 px-2 sm:px-3 text-neutral-600 dark:text-neutral-400 whitespace-nowrap hidden md:table-cell">
                       <div>
                         <span class="font-medium text-[11px] text-neutral-700 dark:text-neutral-300">
                           {doc.source === 'drive' ? 'Corporate Drive' : 'Direct Upload'}
                         </span>
                         {#if doc.drivePath}
-                          <span class="block text-[10px] text-neutral-400 dark:text-neutral-500 font-mono truncate max-w-[200px]" title={doc.drivePath}>
+                          <span class="block text-[10px] text-neutral-400 dark:text-neutral-500 font-mono truncate max-w-[160px]" title={doc.drivePath}>
                             {doc.drivePath}
                           </span>
                         {/if}
                       </div>
                     </td>
 
-                    <td class="py-3 px-3 text-right font-mono tabular-nums text-neutral-600 dark:text-neutral-300">
+                    <td class="py-2.5 px-2 sm:px-3 text-right font-mono tabular-nums text-neutral-600 dark:text-neutral-300 hidden sm:table-cell">
                       {formatBytes(doc.sizeBytes)}
                     </td>
 
-                    <td class="py-3 px-3 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                    <td class="py-2.5 px-2 sm:px-3 text-neutral-500 dark:text-neutral-400 whitespace-nowrap hidden lg:table-cell">
                       {new Date(doc.uploadedAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -374,12 +383,12 @@
                       })}
                     </td>
 
-                    <td class="py-3 px-4 text-right whitespace-nowrap" onclick={(e) => e.stopPropagation()}>
-                      <div class="flex items-center justify-end gap-2">
+                    <td class="py-2.5 px-2 sm:px-4 text-right whitespace-nowrap" onclick={(e) => e.stopPropagation()}>
+                      <div class="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
                           onclick={() => onOpenDocument(doc, 1)}
-                          class="px-2.5 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                          class="px-2 sm:px-2.5 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <span>Open</span>
                           <ExternalLink class="w-3 h-3" />

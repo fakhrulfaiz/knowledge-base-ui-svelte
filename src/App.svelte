@@ -38,7 +38,7 @@
   import UploadModal from './components/UploadModal.svelte';
   import NewCollectionModal from './components/NewCollectionModal.svelte';
   import TeamAllocationModal from './components/TeamAllocationModal.svelte';
-  import { CheckCircle2 } from '@lucide/svelte';
+  import { CheckCircle2, Menu, Layers, Sun, Moon } from '@lucide/svelte';
 
   const INITIAL_REINDEX_JOBS: ReindexJob[] = [
     {
@@ -98,6 +98,7 @@
   let isNewCollectionOpen = $state(false);
   let isDriveModalOpen = $state(false);
   let isUploadModalOpen = $state(false);
+  let isMobileSidebarOpen = $state(false);
 
   // Dark Mode State
   function getInitialDarkMode(): boolean {
@@ -414,6 +415,7 @@
   <Sidebar
     {activeView}
     onSelectView={(v) => {
+      isMobileSidebarOpen = false;
       if (v === 'admin' && !canAccessAdmin(currentUser)) {
         showToast('Access restricted: You do not have permission to view Admin & Resources.');
         return;
@@ -425,28 +427,74 @@
     }}
     {selectedScope}
     onSelectScope={(s) => {
+      isMobileSidebarOpen = false;
       selectedScope = s;
       selectedCollectionId = null;
       activeView = 'collections';
     }}
     {selectedCollectionId}
     onSelectCollection={(id) => {
+      isMobileSidebarOpen = false;
       selectedCollectionId = id;
       activeView = 'collections';
     }}
     {collections}
     {documents}
     {scopeResourceAllocation}
-    onOpenNewCollection={openNewCollectionModal}
+    onOpenNewCollection={() => {
+      isMobileSidebarOpen = false;
+      openNewCollectionModal();
+    }}
     {currentUser}
     onChangeUserRole={handleSwitchUserRole}
     {isDarkMode}
     onToggleDarkMode={handleToggleDarkMode}
+    isMobileOpen={isMobileSidebarOpen}
+    onCloseMobile={() => (isMobileSidebarOpen = false)}
   />
 
-  <!-- Main Content Area -->
-  <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-    {#if activeView === 'home'}
+  <!-- Main Application Wrapper -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative h-screen">
+    <!-- Mobile Top Navigation Header Bar (Visible on mobile/tablet < md) -->
+    <header class="md:hidden h-12 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between px-3 shrink-0 z-30">
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick={() => (isMobileSidebarOpen = true)}
+          class="p-1.5 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+          aria-label="Open navigation menu"
+          title="Open Menu"
+        >
+          <Menu class="w-5 h-5" />
+        </button>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Layers class="w-3.5 h-3.5 text-white" />
+          </div>
+          <span class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 tracking-tight">Cognify</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          onclick={handleToggleDarkMode}
+          class="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+          title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
+          aria-label="Toggle dark mode"
+        >
+          {#if isDarkMode}
+            <Sun class="w-4 h-4 text-amber-400" />
+          {:else}
+            <Moon class="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+          {/if}
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      {#if activeView === 'home'}
       <HomeView
         {currentUser}
         {collections}
@@ -525,6 +573,7 @@
       </div>
     {/if}
   </main>
+  </div>
 
   <!-- Modals -->
   <!-- 1. New Collection Modal -->
