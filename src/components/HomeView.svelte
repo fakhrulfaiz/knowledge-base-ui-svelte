@@ -104,12 +104,12 @@
               onkeydown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') onSelectCollection(col.id);
               }}
-              class="px-4 py-3 bg-[#f0f4f9] hover:bg-[#e4ebf5] dark:bg-neutral-850 dark:hover:bg-neutral-800 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all min-w-[210px] max-w-[260px] flex-1 shrink-0 border border-transparent dark:border-neutral-800/80 shadow-2xs group"
+              class="px-4 py-3 bg-[#f0f4f9] hover:bg-[#e4ebf5] dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all min-w-[210px] max-w-[260px] flex-1 shrink-0 border border-neutral-200/40 dark:border-neutral-700/60 shadow-2xs group"
               title="{col.name} ({col.documentCount} documents)"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <!-- Folder Icon Container -->
-                <div class="w-8 h-8 rounded-lg bg-neutral-200/90 dark:bg-neutral-750 flex items-center justify-center text-neutral-700 dark:text-neutral-200 shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-neutral-200/90 dark:bg-neutral-700 flex items-center justify-center text-neutral-700 dark:text-neutral-200 shrink-0">
                   <Folder class="w-4 h-4 fill-neutral-600 dark:fill-neutral-300 text-neutral-600 dark:text-neutral-300" />
                 </div>
 

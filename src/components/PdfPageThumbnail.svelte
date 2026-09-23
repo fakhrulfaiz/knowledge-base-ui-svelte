@@ -30,13 +30,13 @@
 >
   <!-- Miniature A4 Raster Sheet -->
   <div
-    class="relative w-28 h-36 bg-white dark:bg-neutral-850 rounded-xs shadow-xs border transition-all overflow-hidden flex flex-col justify-between p-2 select-none {isSelected
+    class="relative w-28 h-36 bg-white dark:bg-neutral-900 rounded-xs shadow-xs border transition-all overflow-hidden flex flex-col justify-between p-2 select-none {isSelected
       ? 'border-neutral-800 dark:border-blue-500 shadow-sm'
       : 'border-neutral-200 dark:border-neutral-700 group-hover:border-neutral-300 dark:group-hover:border-neutral-600'}"
   >
     <!-- Raster Top Header -->
     <div>
-      <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-750 pb-1 mb-1.5">
+      <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-700 pb-1 mb-1.5">
         <div class="w-10 h-1 bg-neutral-400 dark:bg-neutral-500 rounded-2xs"></div>
         <div class="text-[7px] font-mono text-neutral-300 dark:text-neutral-500">p.{pageNumber}</div>
       </div>
@@ -83,7 +83,7 @@
     </div>
 
     <!-- Raster Footer -->
-    <div class="border-t border-neutral-100 dark:border-neutral-750 pt-1 flex items-center justify-between">
+    <div class="border-t border-neutral-100 dark:border-neutral-700 pt-1 flex items-center justify-between">
       <div class="w-6 h-0.5 bg-neutral-200 dark:bg-neutral-600 rounded-2xs"></div>
       <div class="w-3 h-0.5 bg-neutral-300 dark:bg-neutral-500 rounded-2xs"></div>
     </div>

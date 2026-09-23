@@ -256,7 +256,7 @@
               }}
               class="p-4 text-left transition-all cursor-pointer relative {isSelected
                 ? 'bg-blue-50/70 dark:bg-blue-950/30 border-l-4 border-l-blue-600 pl-3.5'
-                : 'hover:bg-neutral-50 dark:hover:bg-neutral-850/60 border-l-4 border-l-transparent'}"
+                : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/60 border-l-4 border-l-transparent'}"
             >
               <!-- Top Row: Document Title & Relevance Badge -->
               <div class="flex items-center justify-between gap-2 mb-1">

@@ -53,10 +53,10 @@
   <div class="h-36 bg-neutral-50 dark:bg-neutral-950/80 flex items-center justify-center p-3 overflow-hidden select-none">
     {#if isPdf}
       <!-- PDF Document Miniature Raster Sheet -->
-      <div class="w-24 h-30 bg-white dark:bg-neutral-850 rounded-xs shadow-xs border border-neutral-200 dark:border-neutral-750 p-2 flex flex-col justify-between group-hover:shadow-sm transition-shadow">
+      <div class="w-24 h-30 bg-white dark:bg-neutral-900 rounded-xs shadow-xs border border-neutral-200 dark:border-neutral-700 p-2 flex flex-col justify-between group-hover:shadow-sm transition-shadow">
         <div>
           <!-- Miniature Red PDF Header Bar -->
-          <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-750 pb-1 mb-1.5">
+          <div class="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-1 mb-1.5">
             <div class="w-8 h-1 bg-rose-500 rounded-2xs"></div>
             <div class="w-3 h-0.5 bg-neutral-300 dark:bg-neutral-600 rounded-2xs"></div>
           </div>
@@ -108,7 +108,7 @@
       </div>
     {:else}
       <!-- Generic File Sheet -->
-      <div class="w-24 h-30 bg-white dark:bg-neutral-850 rounded-xs shadow-xs border border-neutral-200 dark:border-neutral-750 p-2 flex flex-col justify-between">
+      <div class="w-24 h-30 bg-white dark:bg-neutral-900 rounded-xs shadow-xs border border-neutral-200 dark:border-neutral-700 p-2 flex flex-col justify-between">
         <div>
           <div class="w-8 h-1 bg-blue-500 rounded-2xs mb-2"></div>
           <div class="w-12 h-1.5 bg-neutral-700 dark:bg-neutral-300 rounded-2xs mb-2"></div>
