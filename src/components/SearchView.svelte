@@ -130,8 +130,27 @@
         {/each}
       </div>
 
-      <!-- Scope Filters & Collection Select -->
-      <div class="flex items-center gap-3 ml-auto">
+      <!-- Scope Filters, Chunks Depth & Collection Select -->
+      <div class="flex items-center gap-3 ml-auto flex-wrap sm:flex-nowrap">
+        <!-- Chunks Limit Selector -->
+        <div class="flex items-center gap-1.5 text-[11px]">
+          <span class="text-neutral-500 dark:text-neutral-400 font-medium">Chunks:</span>
+          <div class="flex items-center p-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700">
+            {#each [10, 30, 50] as count}
+              <button
+                type="button"
+                onclick={() => (resultLimit = count)}
+                class="px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer {resultLimit === count
+                  ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-2xs font-semibold'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+                title="Retrieve top {count} chunks"
+              >
+                {count}
+              </button>
+            {/each}
+          </div>
+        </div>
+
         <!-- Scope Segmented Control -->
         <div class="flex items-center p-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 text-[11px]">
           <button
@@ -197,9 +216,14 @@
     <div class="w-full lg:w-[460px] xl:w-[500px] border-r border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0 bg-white dark:bg-neutral-900">
       <!-- Section Header -->
       <div class="px-4 py-2.5 border-b border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900 flex items-center justify-between text-xs shrink-0">
-        <span class="font-semibold text-neutral-700 dark:text-neutral-300">
-          Ranked Results ({results.length})
-        </span>
+        <div class="flex items-center gap-1.5">
+          <span class="font-semibold text-neutral-700 dark:text-neutral-300">
+            Ranked Results ({results.length})
+          </span>
+          <span class="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono">
+            · top {resultLimit}
+          </span>
+        </div>
         <span class="text-[11px] text-neutral-400 dark:text-neutral-500">
           Click passage to inspect
         </span>
