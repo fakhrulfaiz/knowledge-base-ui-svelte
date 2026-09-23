@@ -19,6 +19,7 @@
   } from '@lucide/svelte';
   import type { Collection, DocumentItem, ScopeResourceAllocation, ScopeType, SystemRole, UserProfile } from '../types';
   import { formatBytes, getScopeUsedBytes } from '../utils/resourceUtils';
+  import { canAccessAdmin, canCreateCollection } from '../utils/governance';
 
   interface Props {
     activeView: 'collections' | 'search' | 'admin';
@@ -67,6 +68,8 @@
 
   let isOwnerOrAdmin = $derived(currentUser.systemRole === 'owner' || currentUser.systemRole === 'admin');
   let isTeamLead = $derived(currentUser.systemRole === 'team_lead' || Boolean(currentUser.isTeamLeader));
+  let canAdmin = $derived(canAccessAdmin(currentUser));
+  let canCreate = $derived(canCreateCollection(currentUser));
 </script>
 
 <aside class="w-60 h-screen bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 flex flex-col shrink-0 border-r border-neutral-200 dark:border-neutral-800 select-none transition-colors">
@@ -99,16 +102,18 @@
   </div>
 
   <!-- New Collection Action -->
-  <div class="p-3 border-b border-neutral-100 dark:border-neutral-800/80">
-    <button
-      type="button"
-      onclick={onOpenNewCollection}
-      class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 text-xs font-medium rounded-lg shadow-xs transition-colors cursor-pointer"
-    >
-      <Plus class="w-4 h-4" />
-      <span>New Collection</span>
-    </button>
-  </div>
+  {#if canCreate}
+    <div class="p-3 border-b border-neutral-100 dark:border-neutral-800/80">
+      <button
+        type="button"
+        onclick={onOpenNewCollection}
+        class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 text-xs font-medium rounded-lg shadow-xs transition-colors cursor-pointer"
+      >
+        <Plus class="w-4 h-4" />
+        <span>New Collection</span>
+      </button>
+    </div>
+  {/if}
 
   <!-- Navigation Sections -->
   <div class="flex-1 overflow-y-auto p-2 space-y-4 text-xs">
@@ -149,42 +154,39 @@
         </span>
       </button>
 
-      <!-- Admin & Ingestion Engine -->
-      <button
-        type="button"
-        onclick={() => onSelectView('admin')}
-        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'admin'
-          ? 'bg-blue-600 text-white font-semibold shadow-2xs'
-          : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
-        title="Resource allocations, ingestion parameters, token budgets, and corpus re-indexing"
-      >
-        <div class="flex items-center gap-2.5">
-          <SlidersHorizontal class="w-4 h-4 {activeView === 'admin' ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}" />
-          <span>Admin &amp; Resources</span>
-        </div>
-        {#if isOwnerOrAdmin}
-          <span
-            class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
-              ? 'bg-blue-800 text-emerald-300'
-              : 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'}"
-          >
-            ADMIN
-          </span>
-        {:else if isTeamLead}
-          <span
-            class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
-              ? 'bg-blue-800 text-blue-200'
-              : 'bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300'}"
-          >
-            LEAD
-          </span>
-        {:else}
-          <span class="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 text-[9px] font-mono flex items-center gap-0.5">
-            <Lock class="w-2.5 h-2.5" />
-            <span>RBAC</span>
-          </span>
-        {/if}
-      </button>
+      <!-- Admin & Ingestion Engine (Governance Protected) -->
+      {#if canAdmin}
+        <button
+          type="button"
+          onclick={() => onSelectView('admin')}
+          class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'admin'
+            ? 'bg-blue-600 text-white font-semibold shadow-2xs'
+            : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          title="Resource allocations, ingestion parameters, token budgets, and corpus re-indexing"
+        >
+          <div class="flex items-center gap-2.5">
+            <SlidersHorizontal class="w-4 h-4 {activeView === 'admin' ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}" />
+            <span>Admin &amp; Resources</span>
+          </div>
+          {#if isOwnerOrAdmin}
+            <span
+              class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
+                ? 'bg-blue-800 text-emerald-300'
+                : 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'}"
+            >
+              ADMIN
+            </span>
+          {:else if isTeamLead}
+            <span
+              class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold tracking-tight {activeView === 'admin'
+                ? 'bg-blue-800 text-blue-200'
+                : 'bg-blue-100 dark:bg-blue-950/70 text-blue-800 dark:text-blue-300'}"
+            >
+              LEAD
+            </span>
+          {/if}
+        </button>
+      {/if}
     </div>
 
     <!-- Scopes Divider -->
@@ -307,49 +309,72 @@
 
   <!-- User Footer Profile & Role Switcher -->
   <div class="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/90 space-y-2.5">
-    <!-- Personal Storage Quota Widget -->
-    <div class="p-2 bg-white dark:bg-neutral-800/90 rounded-lg border border-neutral-200 dark:border-neutral-700/80 space-y-1 shadow-2xs">
-      <div class="flex items-center justify-between text-[10px]">
-        <span class="font-semibold text-neutral-600 dark:text-neutral-300 flex items-center gap-1">
-          <HardDrive class="w-3 h-3 text-blue-600 dark:text-blue-400" />
-          <span>Personal Storage</span>
-        </span>
-        <span class="font-mono text-neutral-500 dark:text-neutral-400 tabular-nums">
-          {formatBytes(personalUsedBytes)} / {personalCapGb} GB
-        </span>
+    {#if currentUser.systemRole !== 'viewer'}
+      <!-- Personal Storage Quota Widget -->
+      <div class="p-2 bg-white dark:bg-neutral-800/90 rounded-lg border border-neutral-200 dark:border-neutral-700/80 space-y-1 shadow-2xs">
+        <div class="flex items-center justify-between text-[10px]">
+          <span class="font-semibold text-neutral-600 dark:text-neutral-300 flex items-center gap-1">
+            <HardDrive class="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            <span>Personal Storage</span>
+          </span>
+          <span class="font-mono text-neutral-500 dark:text-neutral-400 tabular-nums">
+            {formatBytes(personalUsedBytes)} / {personalCapGb} GB
+          </span>
+        </div>
+        <div class="w-full bg-neutral-100 dark:bg-neutral-700 h-1.5 rounded-full overflow-hidden">
+          <div
+            class="h-full transition-all duration-300 {personalPercent > 90 ? 'bg-rose-500' : 'bg-blue-600'}"
+            style="width: {Math.max(2, personalPercent)}%"
+          ></div>
+        </div>
       </div>
-      <div class="w-full bg-neutral-100 dark:bg-neutral-700 h-1.5 rounded-full overflow-hidden">
-        <div
-          class="h-full transition-all duration-300 {personalPercent > 90 ? 'bg-rose-500' : 'bg-blue-600'}"
-          style="width: {Math.max(2, personalPercent)}%"
-        ></div>
+    {:else}
+      <div class="p-2 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg border border-neutral-200 dark:border-neutral-700 text-[10px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
+        <Lock class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+        <span>Read-Only Viewer Account</span>
       </div>
-    </div>
+    {/if}
 
-    <button
-      type="button"
-      onclick={() => onSelectView('admin')}
-      class="w-full flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/60 p-1.5 rounded-md transition-colors text-left"
-      title="Click to open Admin & Resource Governance"
-    >
-      <div class="min-w-0">
-        <div class="font-semibold text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
-          <span>{currentUser.name}</span>
+    {#if canAdmin}
+      <button
+        type="button"
+        onclick={() => onSelectView('admin')}
+        class="w-full flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/60 p-1.5 rounded-md transition-colors text-left"
+        title="Click to open Admin & Resource Governance"
+      >
+        <div class="min-w-0">
+          <div class="font-semibold text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
+            <span>{currentUser.name}</span>
+          </div>
+          <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+            {currentUser.role}
+          </div>
         </div>
-        <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
-          {currentUser.role}
+        <span title="Role: {currentUser.systemRole.toUpperCase()}">
+          {#if isOwnerOrAdmin}
+            <ShieldCheck class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          {:else if isTeamLead}
+            <Shield class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+          {:else}
+            <User class="w-4 h-4 text-neutral-400 dark:text-neutral-500 shrink-0" />
+          {/if}
+        </span>
+      </button>
+    {:else}
+      <div class="w-full flex items-center justify-between text-xs p-1.5 rounded-md text-left">
+        <div class="min-w-0">
+          <div class="font-semibold text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
+            <span>{currentUser.name}</span>
+          </div>
+          <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+            {currentUser.role}
+          </div>
         </div>
-      </div>
-      <span title="Role: {currentUser.systemRole.toUpperCase()}">
-        {#if isOwnerOrAdmin}
-          <ShieldCheck class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-        {:else if isTeamLead}
-          <Shield class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-        {:else}
+        <span title="Role: {currentUser.systemRole.toUpperCase()}">
           <User class="w-4 h-4 text-neutral-400 dark:text-neutral-500 shrink-0" />
-        {/if}
-      </span>
-    </button>
+        </span>
+      </div>
+    {/if}
 
     <!-- Quick RBAC Switcher & Theme Pill -->
     <div class="pt-1 flex items-center justify-between gap-1 text-[10px]">

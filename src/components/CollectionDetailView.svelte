@@ -12,12 +12,18 @@
     ArrowRight,
     LayoutList,
     LayoutGrid,
-    Sliders
+    Sliders,
+    Lock
   } from '@lucide/svelte';
   import type { Collection, DocumentItem, TeamAllocationRecord, UserProfile } from '../types';
   import { computeDocumentGraph } from '../utils/retrieval';
   import DocumentGridCardPreview from './DocumentGridCardPreview.svelte';
   import { formatBytes, getCollectionUsedBytes } from '../utils/resourceUtils';
+  import {
+    canUploadToCollection,
+    canDeleteDocument,
+    canManageCollectionQuota
+  } from '../utils/governance';
 
   interface Props {
     collection: Collection;
@@ -62,6 +68,9 @@
       (t) => t.teamName.toLowerCase() === (collection.teamName || '').toLowerCase()
     )
   );
+
+  let canUpload = $derived(canUploadToCollection(currentUser, collection));
+  let canManageQuota = $derived(canManageCollectionQuota(currentUser, collection));
 
   let filteredDocs = $derived.by(() => {
     if (!docSearchQuery.trim()) return collectionDocs;
@@ -116,23 +125,30 @@
 
     <!-- Action Buttons -->
     <div class="flex items-center gap-2">
-      <button
-        type="button"
-        onclick={onOpenDriveModal}
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
-      >
-        <HardDrive class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-        <span>Import from Drive</span>
-      </button>
+      {#if canUpload}
+        <button
+          type="button"
+          onclick={onOpenDriveModal}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
+        >
+          <HardDrive class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
+          <span>Import from Drive</span>
+        </button>
 
-      <button
-        type="button"
-        onclick={onOpenUploadModal}
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
-      >
-        <Upload class="w-3.5 h-3.5" />
-        <span>Upload Document</span>
-      </button>
+        <button
+          type="button"
+          onclick={onOpenUploadModal}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+        >
+          <Upload class="w-3.5 h-3.5" />
+          <span>Upload Document</span>
+        </button>
+      {:else}
+        <div class="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 text-xs rounded-md">
+          <Lock class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+          <span>Read-Only Viewer</span>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -172,7 +188,7 @@
             ></div>
           </div>
 
-          {#if collection.scope === 'team' && targetTeam && onOpenTeamAllocationModal}
+          {#if collection.scope === 'team' && targetTeam && onOpenTeamAllocationModal && canManageQuota}
             <button
               type="button"
               onclick={() => onOpenTeamAllocationModal(targetTeam)}
@@ -267,22 +283,24 @@
             <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mt-1 mb-4">
               Add files to this collection to enable semantic search and cross-referencing.
             </p>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                onclick={onOpenUploadModal}
-                class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 cursor-pointer shadow-xs"
-              >
-                Upload Document
-              </button>
-              <button
-                type="button"
-                onclick={onOpenDriveModal}
-                class="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700 cursor-pointer"
-              >
-                Import from Drive
-              </button>
-            </div>
+            {#if canUpload}
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  onclick={onOpenUploadModal}
+                  class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 cursor-pointer shadow-xs"
+                >
+                  Upload Document
+                </button>
+                <button
+                  type="button"
+                  onclick={onOpenDriveModal}
+                  class="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700 cursor-pointer"
+                >
+                  Import from Drive
+                </button>
+              </div>
+            {/if}
           </div>
         {:else if viewMode === 'list'}
           <div class="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-2xs">
@@ -349,14 +367,16 @@
                           <ExternalLink class="w-3 h-3" />
                         </button>
 
-                        <button
-                          type="button"
-                          onclick={() => onDeleteDocument(doc.id)}
-                          class="p-1 text-neutral-400 dark:text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 class="w-3.5 h-3.5" />
-                        </button>
+                        {#if canDeleteDocument(currentUser, doc, collection)}
+                          <button
+                            type="button"
+                            onclick={() => onDeleteDocument(doc.id)}
+                            class="p-1 text-neutral-400 dark:text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 class="w-3.5 h-3.5" />
+                          </button>
+                        {/if}
                       </div>
                     </td>
                   </tr>

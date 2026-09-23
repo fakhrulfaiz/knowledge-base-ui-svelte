@@ -20,6 +20,13 @@
   } from './data/mockData';
   import { DEFAULT_INGESTION_CONFIG, reindexDocument } from './utils/chunker';
   import { checkCollectionQuota } from './utils/resourceUtils';
+  import {
+    canAccessAdmin,
+    canCreateCollection,
+    canCreateCollectionInScope,
+    canUploadToCollection,
+    canDeleteDocument
+  } from './utils/governance';
   import Sidebar from './components/Sidebar.svelte';
   import CollectionsView from './components/CollectionsView.svelte';
   import CollectionDetailView from './components/CollectionDetailView.svelte';
@@ -142,6 +149,14 @@
 
   let selectedCollection = $derived(collections.find((c) => c.id === selectedCollectionId));
 
+  // Governance Route Guard: Ensure unauthorized roles (such as viewer or member) cannot view or stay in Admin
+  $effect(() => {
+    if (activeView === 'admin' && !canAccessAdmin(currentUser)) {
+      activeView = 'collections';
+      showToast(`Access restricted: ${currentUser.systemRole.toUpperCase()} accounts cannot access Admin & Resources.`);
+    }
+  });
+
   // User Role Switcher with Persona synchronization
   function handleSwitchUserRole(newRole: SystemRole) {
     const preset = PRESET_USERS.find((u) => u.systemRole === newRole);
@@ -152,10 +167,18 @@
       currentUser = { ...currentUser, systemRole: newRole };
       showToast(`Switched active user role to "${newRole.toUpperCase()}".`);
     }
+    if (activeView === 'admin' && !canAccessAdmin(preset || currentUser)) {
+      activeView = 'collections';
+    }
   }
 
   // Team Resource Allocation Handler
   function handleUpdateTeamAllocation(updatedRecord: TeamAllocationRecord) {
+    if (currentUser.systemRole !== 'owner' && currentUser.systemRole !== 'admin' && currentUser.systemRole !== 'team_lead') {
+      showToast('Permission denied: You do not have permission to modify team quotas.');
+      return;
+    }
+
     teamAllocations = teamAllocations.map((t) =>
       t.teamId === updatedRecord.teamId ? updatedRecord : t
     );
@@ -174,6 +197,10 @@
 
   // Actions
   function handleCreateCollection(newCol: Collection) {
+    if (!canCreateCollection(currentUser) || !canCreateCollectionInScope(currentUser, newCol.scope)) {
+      showToast(`Access denied: Your account (${currentUser.systemRole.toUpperCase()}) cannot create ${newCol.scope} collections.`);
+      return;
+    }
     collections = [newCol, ...collections];
     selectedCollectionId = newCol.id;
     activeView = 'collections';
@@ -181,6 +208,11 @@
   }
 
   function handleDriveImportComplete(newDocs: DocumentItem[]): boolean {
+    if (!canUploadToCollection(currentUser, selectedCollection)) {
+      showToast(`Permission denied: Your role (${currentUser.systemRole.toUpperCase()}) cannot import documents.`);
+      return false;
+    }
+
     if (selectedCollectionId) {
       const targetCol = collections.find((c) => c.id === selectedCollectionId);
       if (targetCol) {
@@ -193,7 +225,7 @@
           teamAllocations
         );
 
-        if (!quotaCheck.allowed) {
+         if (!quotaCheck.allowed) {
           showToast(`⚠️ Storage Quota Exceeded: ${quotaCheck.reason || 'Operation blocked by quota limits.'}`);
           return false;
         }
@@ -219,6 +251,11 @@
   }
 
   function handleUploadComplete(newDoc: DocumentItem): boolean {
+    if (!canUploadToCollection(currentUser, selectedCollection)) {
+      showToast(`Permission denied: Your role (${currentUser.systemRole.toUpperCase()}) cannot upload documents.`);
+      return false;
+    }
+
     if (selectedCollectionId) {
       const targetCol = collections.find((c) => c.id === selectedCollectionId);
       if (targetCol) {
@@ -257,6 +294,12 @@
   function handleDeleteDocument(docId: string) {
     const docToDelete = documents.find((d) => d.id === docId);
     if (!docToDelete) return;
+
+    const parentCol = collections.find((c) => c.id === docToDelete.collectionId);
+    if (!canDeleteDocument(currentUser, docToDelete, parentCol)) {
+      showToast(`Permission denied: Your role (${currentUser.systemRole.toUpperCase()}) cannot delete this document.`);
+      return;
+    }
 
     documents = documents.filter((d) => d.id !== docId);
     collections = collections.map((c) =>
@@ -346,6 +389,23 @@
       chunkId,
     };
   }
+
+  function openNewCollectionModal() {
+    if (!canCreateCollection(currentUser)) {
+      showToast(`Access restricted: ${currentUser.systemRole.toUpperCase()} accounts cannot create collections.`);
+      return;
+    }
+    isNewCollectionOpen = true;
+  }
+
+  function openAdminView() {
+    if (!canAccessAdmin(currentUser)) {
+      showToast(`Access restricted: ${currentUser.systemRole.toUpperCase()} accounts cannot access Admin & Resources.`);
+      return;
+    }
+    selectedCollectionId = null;
+    activeView = 'admin';
+  }
 </script>
 
 <div class="flex h-screen w-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans antialiased transition-colors">
@@ -353,6 +413,10 @@
   <Sidebar
     {activeView}
     onSelectView={(v) => {
+      if (v === 'admin' && !canAccessAdmin(currentUser)) {
+        showToast('Access restricted: You do not have permission to view Admin & Resources.');
+        return;
+      }
       activeView = v;
       selectedCollectionId = null;
     }}
@@ -372,7 +436,7 @@
     {collections}
     {documents}
     {scopeResourceAllocation}
-    onOpenNewCollection={() => (isNewCollectionOpen = true)}
+    onOpenNewCollection={openNewCollectionModal}
     {currentUser}
     onChangeUserRole={handleSwitchUserRole}
     {isDarkMode}
@@ -381,7 +445,7 @@
 
   <!-- Main Content Area -->
   <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-    {#if activeView === 'admin'}
+    {#if activeView === 'admin' && canAccessAdmin(currentUser)}
       <AdminView
         {currentUser}
         onChangeUserRole={handleSwitchUserRole}
@@ -428,11 +492,8 @@
         {selectedScope}
         onSelectScope={(s) => (selectedScope = s)}
         onSelectCollection={(id) => (selectedCollectionId = id)}
-        onOpenNewCollection={() => (isNewCollectionOpen = true)}
-        onOpenAdmin={() => {
-          selectedCollectionId = null;
-          activeView = 'admin';
-        }}
+        onOpenNewCollection={openNewCollectionModal}
+        onOpenAdmin={openAdminView}
         {currentUser}
         {teamAllocations}
         onOpenTeamAllocationModal={(team) => (activeTeamModalRecord = team)}

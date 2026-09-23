@@ -5,9 +5,16 @@
     Building2,
     Users,
     User,
-    ArrowRight
+    ArrowRight,
+    Lock,
+    ShieldAlert
   } from '@lucide/svelte';
   import type { Collection, UserProfile } from '../types';
+  import {
+    canCreateCollection,
+    getAllowedCollectionScopes,
+    canCreateCollectionInScope
+  } from '../utils/governance';
 
   interface Props {
     currentUser: UserProfile;
@@ -17,14 +24,29 @@
 
   let { currentUser, onClose, onCreate }: Props = $props();
 
+  let allowedScopes = $derived(getAllowedCollectionScopes(currentUser));
+  let canCreate = $derived(canCreateCollection(currentUser));
+  let canScopeMine = $derived(allowedScopes.includes('mine'));
+  let canScopeTeam = $derived(allowedScopes.includes('team'));
+  let canScopeOrg = $derived(allowedScopes.includes('org'));
+
   let name = $state('');
   let description = $state('');
   let scope = $state<'mine' | 'team' | 'org'>('mine');
-  let teamName = $state('Platform Infrastructure');
+  // svelte-ignore state_referenced_locally
+  let teamName = $state(currentUser.teamName || 'Platform Infrastructure');
+
+  $effect(() => {
+    // Ensure default selected scope is allowed
+    if (allowedScopes.length > 0 && !allowedScopes.includes(scope)) {
+      scope = allowedScopes[0];
+    }
+  });
 
   function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     if (!name.trim()) return;
+    if (!canCreate || !canCreateCollectionInScope(currentUser, scope)) return;
 
     const newCol: Collection = {
       id: `col-${Date.now()}`,
@@ -70,6 +92,12 @@
 
     <!-- Form -->
     <form onsubmit={handleSubmit} class="p-6 space-y-4 text-xs">
+      {#if !canCreate}
+        <div class="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+          <Lock class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>Your account role ({currentUser.systemRole.toUpperCase()}) is read-only. Creating collections requires contributor or administrator privileges.</span>
+        </div>
+      {/if}
       <!-- Collection Name -->
       <div>
         <label for="col-name" class="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
@@ -107,14 +135,22 @@
         <div class="grid grid-cols-3 gap-2">
           <button
             type="button"
+            disabled={!canScopeMine}
             onclick={() => (scope = 'mine')}
-            class="p-2.5 rounded-lg border text-left cursor-pointer transition-all {scope === 'mine'
-              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'}"
+            class="p-2.5 rounded-lg border text-left transition-all {!canScopeMine
+              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
+              : scope === 'mine'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
+              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
           >
-            <div class="flex items-center gap-1.5 font-medium mb-0.5">
-              <User class="w-3.5 h-3.5" />
-              <span>Mine</span>
+            <div class="flex items-center justify-between font-medium mb-0.5">
+              <div class="flex items-center gap-1.5">
+                <User class="w-3.5 h-3.5" />
+                <span>Mine</span>
+              </div>
+              {#if !canScopeMine}
+                <Lock class="w-3 h-3 text-neutral-400" />
+              {/if}
             </div>
             <div class="text-[10px] {scope === 'mine' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
               Private personal scope
@@ -123,33 +159,51 @@
 
           <button
             type="button"
+            disabled={!canScopeTeam}
             onclick={() => (scope = 'team')}
-            class="p-2.5 rounded-lg border text-left cursor-pointer transition-all {scope === 'team'
-              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'}"
+            class="p-2.5 rounded-lg border text-left transition-all {!canScopeTeam
+              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
+              : scope === 'team'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
+              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
+            title={!canScopeTeam ? 'Requires Team Lead or Admin role' : ''}
           >
-            <div class="flex items-center gap-1.5 font-medium mb-0.5">
-              <Users class="w-3.5 h-3.5" />
-              <span>Team</span>
+            <div class="flex items-center justify-between font-medium mb-0.5">
+              <div class="flex items-center gap-1.5">
+                <Users class="w-3.5 h-3.5" />
+                <span>Team</span>
+              </div>
+              {#if !canScopeTeam}
+                <Lock class="w-3 h-3 text-neutral-400" />
+              {/if}
             </div>
             <div class="text-[10px] {scope === 'team' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
-              Shared with team members
+              {canScopeTeam ? 'Shared with team members' : 'Requires Team Lead'}
             </div>
           </button>
 
           <button
             type="button"
+            disabled={!canScopeOrg}
             onclick={() => (scope = 'org')}
-            class="p-2.5 rounded-lg border text-left cursor-pointer transition-all {scope === 'org'
-              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300'}"
+            class="p-2.5 rounded-lg border text-left transition-all {!canScopeOrg
+              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
+              : scope === 'org'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
+              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
+            title={!canScopeOrg ? 'Requires Admin or Owner role' : ''}
           >
-            <div class="flex items-center gap-1.5 font-medium mb-0.5">
-              <Building2 class="w-3.5 h-3.5" />
-              <span>Organization</span>
+            <div class="flex items-center justify-between font-medium mb-0.5">
+              <div class="flex items-center gap-1.5">
+                <Building2 class="w-3.5 h-3.5" />
+                <span>Organization</span>
+              </div>
+              {#if !canScopeOrg}
+                <Lock class="w-3 h-3 text-neutral-400" />
+              {/if}
             </div>
             <div class="text-[10px] {scope === 'org' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
-              Enterprise-wide shared
+              {canScopeOrg ? 'Enterprise-wide shared' : 'Requires Admin/Owner'}
             </div>
           </button>
         </div>
@@ -186,8 +240,8 @@
         </button>
         <button
           type="submit"
-          disabled={!name.trim()}
-          class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-semibold rounded-md shadow-xs transition-colors cursor-pointer"
+          disabled={!name.trim() || !canCreate || !canCreateCollectionInScope(currentUser, scope)}
+          class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-md shadow-xs transition-colors cursor-pointer"
         >
           <span>Create Collection</span>
           <ArrowRight class="w-3.5 h-3.5" />

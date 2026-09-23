@@ -13,6 +13,7 @@
   } from '@lucide/svelte';
   import type { Collection, ScopeType, TeamAllocationRecord, UserProfile } from '../types';
   import CollectionCard from './CollectionCard.svelte';
+  import { canAccessAdmin, canCreateCollection } from '../utils/governance';
 
   interface Props {
     collections: Collection[];
@@ -37,6 +38,15 @@
     teamAllocations,
     onOpenTeamAllocationModal,
   }: Props = $props();
+
+  let canAdmin = $derived(canAccessAdmin(currentUser));
+  let canCreate = $derived(canCreateCollection(currentUser));
+  let canManageQuotas = $derived(
+    currentUser?.systemRole === 'owner' ||
+    currentUser?.systemRole === 'admin' ||
+    currentUser?.systemRole === 'team_lead' ||
+    Boolean(currentUser?.isTeamLeader)
+  );
 
   let searchQuery = $state('');
   let sharedSubFilter = $state<'all-shared' | 'org' | 'team'>('all-shared');
@@ -92,7 +102,7 @@
     </div>
 
     <div class="flex items-center gap-2.5">
-      {#if onOpenAdmin}
+      {#if onOpenAdmin && canAdmin}
         <button
           type="button"
           onclick={onOpenAdmin}
@@ -103,14 +113,16 @@
           <span>Admin &amp; Ingestion</span>
         </button>
       {/if}
-      <button
-        type="button"
-        onclick={onOpenNewCollection}
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
-      >
-        <Plus class="w-3.5 h-3.5" />
-        <span>Create Collection</span>
-      </button>
+      {#if canCreate}
+        <button
+          type="button"
+          onclick={onOpenNewCollection}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+        >
+          <Plus class="w-3.5 h-3.5" />
+          <span>Create Collection</span>
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -238,13 +250,15 @@
             ? `No collections matched "${searchQuery}". Try adjusting your search query or scope.`
             : 'No collections in this scope yet. Create a collection to organize ingested documents.'}
         </p>
-        <button
-          type="button"
-          onclick={onOpenNewCollection}
-          class="px-3.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
-        >
-          Create New Collection
-        </button>
+        {#if canCreate}
+          <button
+            type="button"
+            onclick={onOpenNewCollection}
+            class="px-3.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
+          >
+            Create New Collection
+          </button>
+        {/if}
       </div>
     {:else}
       <div class="space-y-6">
@@ -346,7 +360,7 @@
                 </h2>
               </div>
 
-              {#if teamAllocations && onOpenTeamAllocationModal}
+              {#if teamAllocations && onOpenTeamAllocationModal && canManageQuotas}
                 {@const targetTeam = teamAllocations.find(
                   (t) => t.teamName.toLowerCase() === (currentUser?.teamName || '').toLowerCase()
                 ) || teamAllocations[0]}
