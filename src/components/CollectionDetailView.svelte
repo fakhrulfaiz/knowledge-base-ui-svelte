@@ -391,53 +391,13 @@
             </table>
           </div>
         {:else}
-          <!-- Grid View with Enterprise Document Preview Boxes -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- Google Drive Style Grid View (Compact, Uncluttered, Minimalist) -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {#each filteredDocs as doc (doc.id)}
-              {@const firstPageText = doc.pages[0]?.chunks[0]?.snippet || doc.summary}
-              <div
-                role="button"
-                tabindex="0"
+              <DocumentGridCardPreview
+                {doc}
                 onclick={() => onOpenDocument(doc, 1)}
-                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDocument(doc, 1); }}
-                class="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group overflow-hidden"
-              >
-                <!-- Enterprise Document Box Preview -->
-                <DocumentGridCardPreview
-                  title={doc.title}
-                  fileType={doc.fileType}
-                  pageCount={doc.pageCount}
-                  firstPageSnippet={firstPageText}
-                />
-
-                <!-- Card Content Footer -->
-                <div class="p-4 space-y-3 bg-white dark:bg-neutral-900 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div class="flex items-center justify-between text-xs text-neutral-400 dark:text-neutral-500 mb-1.5">
-                      <span class="font-mono font-semibold text-neutral-600 dark:text-neutral-300 uppercase">
-                        {doc.fileType}
-                      </span>
-                      <span class="font-mono">{formatBytes(doc.sizeBytes)}</span>
-                    </div>
-                    <h4 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 line-clamp-2 transition-colors">
-                      {doc.title}
-                    </h4>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 mt-1.5 leading-relaxed">
-                      {doc.summary}
-                    </p>
-                  </div>
-
-                  <div class="pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-                    <span class="text-[11px] text-neutral-400 dark:text-neutral-500">
-                      Added {new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800 group-hover:bg-blue-600 group-hover:text-white text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-colors">
-                      <span>Open Document</span>
-                      <ExternalLink class="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                </div>
-              </div>
+              />
             {/each}
           </div>
         {/if}
