@@ -34,17 +34,11 @@
   class="p-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group"
 >
   <div>
-    <!-- Scope, Owner, and Quota badge -->
-    <div class="flex items-center justify-between text-[11px] text-neutral-400 dark:text-neutral-500 mb-2">
-      <div class="flex items-center gap-1.5 truncate">
-        <span class="font-medium text-neutral-600 dark:text-neutral-300">{scopeLabel}</span>
-        <span aria-hidden="true">·</span>
-        <span class="truncate">{collection.createdBy.name}</span>
-      </div>
-
-      <span class="shrink-0 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-semibold border border-blue-100 dark:border-blue-900/60">
-        {collection.allocatedGb || 10} GB Quota
-      </span>
+    <!-- Scope and Owner -->
+    <div class="flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-2 truncate">
+      <span class="font-medium text-neutral-600 dark:text-neutral-300">{scopeLabel}</span>
+      <span aria-hidden="true">·</span>
+      <span class="truncate">{collection.createdBy.name}</span>
     </div>
 
     <!-- Collection Title -->
