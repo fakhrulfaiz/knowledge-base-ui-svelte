@@ -195,7 +195,7 @@
         Scopes
       </div>
 
-      <!-- Mine -->
+      <!-- Personal Scope -->
       <button
         type="button"
         onclick={() => {
@@ -209,7 +209,7 @@
       >
         <div class="flex items-center gap-2">
           <User class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>My Collections</span>
+          <span>Personal</span>
         </div>
         <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
           {mineCollections.length}

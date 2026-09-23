@@ -561,7 +561,7 @@
                         <User class="w-4 h-4" />
                       </div>
                       <h3 class="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                        Personal Scope (Mine)
+                        Personal Scope
                       </h3>
                     </div>
                     <span class="text-[10px] font-mono bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800 font-medium">

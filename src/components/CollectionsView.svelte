@@ -140,7 +140,7 @@
             : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         >
           <User class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>Mine</span>
+          <span>Personal</span>
         </button>
 
         <button
@@ -334,7 +334,7 @@
               <div class="flex items-center gap-2 pb-1 border-b border-neutral-200 dark:border-neutral-800">
                 <User class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                 <h2 class="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                  Personal Collections (Mine)
+                  Personal Collections
                 </h2>
                 <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
                   ({mineCollections.length})

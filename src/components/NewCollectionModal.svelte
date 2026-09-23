@@ -146,14 +146,14 @@
             <div class="flex items-center justify-between font-medium mb-0.5">
               <div class="flex items-center gap-1.5">
                 <User class="w-3.5 h-3.5" />
-                <span>Mine</span>
+                <span>Personal</span>
               </div>
               {#if !canScopeMine}
                 <Lock class="w-3 h-3 text-neutral-400" />
               {/if}
             </div>
             <div class="text-[10px] {scope === 'mine' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
-              Private personal scope
+              Private personal collection
             </div>
           </button>
 
