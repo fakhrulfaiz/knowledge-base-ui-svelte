@@ -102,7 +102,7 @@
   // Dark Mode State
   function getInitialDarkMode(): boolean {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('nexus_dark_mode');
+      const saved = localStorage.getItem('cognify_dark_mode') ?? localStorage.getItem('nexus_dark_mode');
       if (saved !== null) {
         return saved === 'true';
       }
@@ -117,10 +117,10 @@
     if (typeof document !== 'undefined') {
       if (isDarkMode) {
         document.documentElement.classList.add('dark');
-        localStorage.setItem('nexus_dark_mode', 'true');
+        localStorage.setItem('cognify_dark_mode', 'true');
       } else {
         document.documentElement.classList.remove('dark');
-        localStorage.setItem('nexus_dark_mode', 'false');
+        localStorage.setItem('cognify_dark_mode', 'false');
       }
     }
   });

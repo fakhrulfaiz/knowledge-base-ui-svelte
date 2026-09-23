@@ -81,7 +81,7 @@
         <Layers class="w-4 h-4 text-white" />
       </div>
       <div class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 tracking-tight">
-        Nexus Knowledge
+        Cognify Knowledge
       </div>
     </div>
 
