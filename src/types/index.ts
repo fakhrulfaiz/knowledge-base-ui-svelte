@@ -81,6 +81,8 @@ export interface DriveFolder {
   name: string;
   path: string;
   parentId: string | null;
+  scope?: 'mine' | 'team' | 'org';
+  teamName?: string;
 }
 
 export interface DriveFile {
@@ -93,6 +95,10 @@ export interface DriveFile {
   lastModified: string;
   author: string;
   previewSummary: string;
+  scope?: 'mine' | 'team' | 'org';
+  teamName?: string;
+  extractorStatus?: 'extracted' | 'not_extracted' | 'extracting';
+  extractedAt?: string;
   rawContent: {
     title: string;
     summary: string;

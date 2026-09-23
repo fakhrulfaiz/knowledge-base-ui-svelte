@@ -132,7 +132,7 @@
           class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
         >
           <HardDrive class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>Import from Drive</span>
+          <span>Upload from Drive</span>
         </button>
 
         <button
@@ -302,7 +302,7 @@
                   onclick={onOpenDriveModal}
                   class="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-medium rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-700 cursor-pointer"
                 >
-                  Import from Drive
+                  Upload from Drive
                 </button>
               </div>
             {/if}
@@ -313,7 +313,7 @@
               <thead class="bg-neutral-50 dark:bg-neutral-800/60 border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-medium">
                 <tr>
                   <th class="py-2.5 px-4">Document Title</th>
-                  <th class="py-2.5 px-3">Format</th>
+                  <th class="py-2.5 px-3">Status</th>
                   <th class="py-2.5 px-3">Source</th>
                   <th class="py-2.5 px-3 text-right">Size</th>
                   <th class="py-2.5 px-3">Date Added</th>
@@ -342,12 +342,24 @@
                       </div>
                     </td>
 
-                    <td class="py-3 px-3 text-neutral-600 dark:text-neutral-400 uppercase font-mono text-[11px] whitespace-nowrap">
-                      {doc.fileType}
+                    <td class="py-3 px-3 whitespace-nowrap">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span>Ingested ({doc.chunkCount} chunks)</span>
+                      </span>
                     </td>
 
-                    <td class="py-3 px-3 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                      {doc.source === 'drive' ? 'Google Drive' : 'Direct Upload'}
+                    <td class="py-3 px-3 text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
+                      <div>
+                        <span class="font-medium text-[11px] text-neutral-700 dark:text-neutral-300">
+                          {doc.source === 'drive' ? 'Corporate Drive' : 'Direct Upload'}
+                        </span>
+                        {#if doc.drivePath}
+                          <span class="block text-[10px] text-neutral-400 dark:text-neutral-500 font-mono truncate max-w-[200px]" title={doc.drivePath}>
+                            {doc.drivePath}
+                          </span>
+                        {/if}
+                      </div>
                     </td>
 
                     <td class="py-3 px-3 text-right font-mono tabular-nums text-neutral-600 dark:text-neutral-300">

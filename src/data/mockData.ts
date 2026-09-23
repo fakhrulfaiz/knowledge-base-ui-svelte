@@ -607,19 +607,27 @@ export const INITIAL_DOCUMENTS: DocumentItem[] = rawDocsData.map((raw) => {
   };
 });
 
-// Corporate Drive repository structure for the "Import from Drive" file picker modal
+// Corporate Drive repository structure for the "Upload from Drive" file picker modal
 export const DRIVE_FOLDERS: DriveFolder[] = [
-  { id: 'f-root', name: 'Company Drive', path: '/', parentId: null },
-  { id: 'f-eng', name: 'Engineering & Architecture', path: '/Engineering & Architecture', parentId: 'f-root' },
-  { id: 'f-sec', name: 'Security & Governance', path: '/Security & Governance', parentId: 'f-root' },
-  { id: 'f-infra', name: 'Infrastructure Runbooks', path: '/Infrastructure Runbooks', parentId: 'f-root' },
-  { id: 'f-compliance', name: 'Audits & Regulatory', path: '/Audits & Regulatory', parentId: 'f-root' },
+  // Organization Drive
+  { id: 'f-sec', name: 'Security & Governance', path: '/Security & Governance', parentId: null, scope: 'org' },
+  { id: 'f-compliance', name: 'Audits & Regulatory Policies', path: '/Audits & Regulatory', parentId: null, scope: 'org' },
+  
+  // Team Drive (Platform Infrastructure & Core AI)
+  { id: 'f-infra', name: 'Infrastructure Runbooks', path: '/Infrastructure Runbooks', parentId: null, scope: 'team', teamName: 'Platform Infrastructure' },
+  { id: 'f-eng', name: 'Architecture & Specifications', path: '/Architecture & Specifications', parentId: null, scope: 'team', teamName: 'Core AI Infrastructure' },
+  
+  // Personal Drive (My Drive)
+  { id: 'f-mine-drafts', name: 'My Working Drafts', path: '/My Drive/Working Drafts', parentId: null, scope: 'mine' },
+  { id: 'f-mine-specs', name: 'My Technical RFCs', path: '/My Drive/RFC Proposals', parentId: null, scope: 'mine' },
 ];
 
 export const DRIVE_FILES: DriveFile[] = [
   {
     id: 'drv-file-01',
     folderId: 'f-sec',
+    scope: 'org',
+    extractorStatus: 'extracted',
     title: 'Cloudflare Zero Trust & Cloud WAF Integration Guidelines 2026',
     filename: 'SEC-WAF-ZeroTrust-Guidelines.pdf',
     fileType: 'pdf',
@@ -658,6 +666,9 @@ Any unexpected credential stuffing attempt triggers immediate IP throttling and 
   {
     id: 'drv-file-02',
     folderId: 'f-eng',
+    scope: 'team',
+    teamName: 'Core AI Infrastructure',
+    extractorStatus: 'not_extracted',
     title: 'API Gateway Rate Limiting & Quota Management Specification',
     filename: 'ARCH-API-RateLimiting-Quotas.docx',
     fileType: 'docx',
@@ -691,6 +702,9 @@ When clients exceed allotted request limits, the gateway returns HTTP 429 Too Ma
   {
     id: 'drv-file-03',
     folderId: 'f-infra',
+    scope: 'team',
+    teamName: 'Platform Infrastructure',
+    extractorStatus: 'extracted',
     title: 'Disaster Recovery Automated Failover & Cold Standby Protocol',
     filename: 'INFRA-DR-Automated-Failover-Protocol.pdf',
     fileType: 'pdf',
@@ -721,6 +735,8 @@ Before accepting external customer traffic on secondary clusters, replication la
   {
     id: 'drv-file-04',
     folderId: 'f-compliance',
+    scope: 'org',
+    extractorStatus: 'not_extracted',
     title: 'GDPR & CCPA Data Retention & Deletion Automation Architecture',
     filename: 'COMPLIANCE-GDPR-Data-Retention-2026.md',
     fileType: 'md',
@@ -741,6 +757,62 @@ Before accepting external customer traffic on secondary clusters, replication la
 Under GDPR Article 17, consumer deletion requests must cascade across all persistent databases, analytical data warehouses, and vector chunk embeddings within 30 calendar days.
 
 We implement cryptographic deletion: each user record is encrypted with a unique per-user key in Secret Manager. Deletion of the user's master key renders all historical database rows and chunk snippets permanently unrecoverable.`
+        }
+      ]
+    }
+  },
+  {
+    id: 'drv-file-05',
+    folderId: 'f-mine-drafts',
+    scope: 'mine',
+    extractorStatus: 'extracted',
+    title: 'Personal Research: Distributed Vector Graph Traversal & HNSW Indexing',
+    filename: 'RESEARCH-Vector-Graph-HNSW.md',
+    fileType: 'md',
+    sizeBytes: 680000,
+    lastModified: '2026-09-22T09:15:00Z',
+    author: 'Elena Rostova',
+    previewSummary: 'Technical notes analyzing HNSW vs IVF-PQ indexing tradeoffs in pgvector and memory saturation thresholds.',
+    rawContent: {
+      title: 'Personal Research: Distributed Vector Graph Traversal & HNSW Indexing',
+      summary: 'Empirical memory benchmarks and graph connectivity trade-offs.',
+      entities: ['pgvector', 'HNSW', 'IVF-PQ', 'PostgreSQL'],
+      semanticTopics: ['Vector Search', 'Machine Learning', 'Database Optimization'],
+      pages: [
+        {
+          pageNumber: 1,
+          header: '1. Graph Connectivity & Index Build Times',
+          content: `### 1. Graph Connectivity & Index Build Times
+Benchmarking m=16 vs m=32 link counts on 1,536-dimensional embeddings. Setting ef_construction=64 provides 98.4% recall at 10x query throughput over sequential scans.
+
+Memory footprint scales linearly with dimension count and edge degree, requiring dedicated shared memory allocation.`
+        }
+      ]
+    }
+  },
+  {
+    id: 'drv-file-06',
+    folderId: 'f-mine-specs',
+    scope: 'mine',
+    extractorStatus: 'not_extracted',
+    title: 'Local Environment Zero Trust Dev Mesh Setup Guide',
+    filename: 'DEV-Local-ZeroTrust-Mesh.pdf',
+    fileType: 'pdf',
+    sizeBytes: 1120000,
+    lastModified: '2026-09-21T11:00:00Z',
+    author: 'Elena Rostova',
+    previewSummary: 'Draft configuration for local k3d clusters with simulated Envoy mTLS sidecars and self-signed certificates.',
+    rawContent: {
+      title: 'Local Environment Zero Trust Dev Mesh Setup Guide',
+      summary: 'Developer workstation setup for local SPIFFE/SPIRE agent testing.',
+      entities: ['k3d', 'SPIFFE', 'Envoy Gateway', 'Docker'],
+      semanticTopics: ['Developer Tooling', 'Zero Trust', 'Kubernetes'],
+      pages: [
+        {
+          pageNumber: 1,
+          header: '1. Local Cluster Bootstrap',
+          content: `### 1. Local Cluster Bootstrap
+Instructions for spinning up a lightweight multi-node development cluster with SPIRE agent Daemons running locally via Docker socket attestation.`
         }
       ]
     }

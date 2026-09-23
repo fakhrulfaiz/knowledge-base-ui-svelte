@@ -200,17 +200,13 @@
           : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         title="All Collections"
       >
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <FolderKanban class="w-4.5 h-4.5 {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
           {#if !isCollapsed}
             <span>All Collections</span>
+            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">({collections.length})</span>
           {/if}
         </div>
-        {#if !isCollapsed}
-          <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-            {collections.length}
-          </span>
-        {/if}
       </button>
 
       <!-- Admin & Ingestion Engine (Governance Protected) -->
@@ -273,17 +269,13 @@
           : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         title="Personal Scope"
       >
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <User class="w-4.5 h-4.5 {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
           {#if !isCollapsed}
             <span>Personal</span>
+            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">({mineCollections.length})</span>
           {/if}
         </div>
-        {#if !isCollapsed}
-          <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-            {mineCollections.length}
-          </span>
-        {/if}
       </button>
 
       <!-- Shared Scopes Header / Team & Org Folders -->
@@ -301,17 +293,15 @@
         class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100"
         title="Shared Knowledge (Team & Org)"
       >
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <Users class="w-4.5 h-4.5 text-neutral-500 dark:text-neutral-400" />
           {#if !isCollapsed}
             <span>Shared</span>
+            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">({teamCollections.length + orgCollections.length})</span>
           {/if}
         </div>
         {#if !isCollapsed}
-          <div class="flex items-center gap-1.5">
-            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-              {teamCollections.length + orgCollections.length}
-            </span>
+          <div class="flex items-center">
             {#if sharedExpanded}
               <ChevronDown class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
             {:else}
@@ -336,13 +326,11 @@
               ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
               : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
           >
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2">
               <Building2 class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
               <span>Organization</span>
+              <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">({orgCollections.length})</span>
             </div>
-            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-              {orgCollections.length}
-            </span>
           </button>
 
           <!-- Team Sub-scope -->
@@ -357,13 +345,11 @@
               ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
               : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
           >
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2">
               <Users class="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
               <span>Team</span>
+              <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">({teamCollections.length})</span>
             </div>
-            <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-              {teamCollections.length}
-            </span>
           </button>
         </div>
       {/if}
