@@ -419,7 +419,9 @@
         return;
       }
       activeView = v;
-      selectedCollectionId = null;
+      if (v !== 'collections') {
+        selectedCollectionId = null;
+      }
     }}
     {selectedScope}
     onSelectScope={(s) => {
@@ -430,9 +432,7 @@
     {selectedCollectionId}
     onSelectCollection={(id) => {
       selectedCollectionId = id;
-      if (id) {
-        activeView = 'collections';
-      }
+      activeView = 'collections';
     }}
     {collections}
     {documents}

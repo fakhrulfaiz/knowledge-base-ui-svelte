@@ -310,10 +310,7 @@
           {@const isSelected = selectedCollectionId === col.id}
           <button
             type="button"
-            onclick={() => {
-              onSelectCollection(col.id);
-              onSelectView('collections');
-            }}
+            onclick={() => onSelectCollection(col.id)}
             class="w-full text-left px-2 py-1.5 rounded-md text-xs truncate transition-colors cursor-pointer {isSelected
               ? 'bg-blue-600 text-white font-medium shadow-2xs'
               : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
