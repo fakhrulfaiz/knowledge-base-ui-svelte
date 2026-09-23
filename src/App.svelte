@@ -28,6 +28,7 @@
     canDeleteDocument
   } from './utils/governance';
   import Sidebar from './components/Sidebar.svelte';
+  import HomeView from './components/HomeView.svelte';
   import CollectionsView from './components/CollectionsView.svelte';
   import CollectionDetailView from './components/CollectionDetailView.svelte';
   import SearchView from './components/SearchView.svelte';
@@ -73,7 +74,7 @@
   ];
 
   // Navigation State
-  let activeView = $state<'collections' | 'search' | 'admin'>('collections');
+  let activeView = $state<'home' | 'collections' | 'search' | 'admin'>('home');
   let selectedScope = $state<ScopeType>('all');
   let selectedCollectionId = $state<string | null>(null);
 
@@ -445,7 +446,23 @@
 
   <!-- Main Content Area -->
   <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-    {#if activeView === 'admin' && canAccessAdmin(currentUser)}
+    {#if activeView === 'home'}
+      <HomeView
+        {currentUser}
+        {collections}
+        {documents}
+        onSelectCollection={(id) => {
+          selectedCollectionId = id;
+          activeView = 'collections';
+        }}
+        onOpenDocument={handleOpenDocument}
+        onNavigate={(view) => {
+          activeView = view;
+          selectedCollectionId = null;
+        }}
+        onOpenNewCollection={openNewCollectionModal}
+      />
+    {:else if activeView === 'admin' && canAccessAdmin(currentUser)}
       <AdminView
         {currentUser}
         onChangeUserRole={handleSwitchUserRole}

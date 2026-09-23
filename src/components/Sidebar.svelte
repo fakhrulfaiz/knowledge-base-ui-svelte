@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    Home,
     FolderKanban,
     Search,
     Plus,
@@ -22,8 +23,8 @@
   import { canAccessAdmin, canCreateCollection } from '../utils/governance';
 
   interface Props {
-    activeView: 'collections' | 'search' | 'admin';
-    onSelectView: (view: 'collections' | 'search' | 'admin') => void;
+    activeView: 'home' | 'collections' | 'search' | 'admin';
+    onSelectView: (view: 'home' | 'collections' | 'search' | 'admin') => void;
     selectedScope: ScopeType;
     onSelectScope: (scope: ScopeType) => void;
     selectedCollectionId: string | null;
@@ -119,6 +120,23 @@
   <div class="flex-1 overflow-y-auto p-2 space-y-4 text-xs">
     <!-- Top-Level Quick Links -->
     <div class="space-y-0.5">
+      <!-- Home (Google Drive Style Landing) -->
+      <button
+        type="button"
+        onclick={() => {
+          onSelectCollection(null);
+          onSelectView('home');
+        }}
+        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md font-medium transition-colors cursor-pointer {activeView === 'home'
+          ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-semibold'
+          : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+      >
+        <div class="flex items-center gap-2.5">
+          <Home class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+          <span>Home</span>
+        </div>
+      </button>
+
       <!-- Search -->
       <button
         type="button"
