@@ -84,7 +84,7 @@
 </script>
 
 <aside
-  class="h-screen bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 flex flex-col shrink-0 border-r border-neutral-200 dark:border-neutral-800 select-none transition-all duration-300 ease-in-out {isCollapsed ? 'w-16' : 'w-64 md:w-72'}"
+  class="h-screen bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 flex flex-col shrink-0 border-r border-neutral-200 dark:border-neutral-800 select-none transition-all duration-300 ease-in-out {isCollapsed ? 'w-16' : 'w-64 md:w-72'} overflow-hidden"
 >
   <!-- Brand & Workspace Title / Expand-Collapse Toggle -->
   <div class="h-14 px-3 flex items-center {isCollapsed ? 'justify-center' : 'justify-between'} border-b border-neutral-200 dark:border-neutral-800 shrink-0">
@@ -146,10 +146,10 @@
     </div>
   {/if}
 
-  <!-- Navigation Sections -->
-  <div class="flex-1 overflow-y-auto {isCollapsed ? 'p-2 space-y-3' : 'p-3 space-y-4'} text-sm">
-    <!-- Top-Level Quick Links -->
-    <div class="space-y-1">
+  <!-- Navigation Sections: Primary navigation is fixed with NO scrollbar, only Collections list can scroll -->
+  <div class="flex-1 flex flex-col min-h-0 {isCollapsed ? 'p-2 space-y-2' : 'p-3 space-y-2'} text-sm overflow-hidden">
+    <!-- Top-Level Quick Links (Home, Search, All Collections, Admin) - Fixed in view (shrink-0) -->
+    <div class="space-y-0.5 shrink-0">
       <!-- Home (Google Drive Style Landing) -->
       <button
         type="button"
@@ -157,12 +157,12 @@
           onSelectCollection(null);
           onSelectView('home');
         }}
-        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'home'
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'home'
           ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
           : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         title="Home"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <Home class="w-4.5 h-4.5 {activeView === 'home' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
           {#if !isCollapsed}
             <span>Home</span>
@@ -174,12 +174,12 @@
       <button
         type="button"
         onclick={() => onSelectView('search')}
-        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'search'
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'search'
           ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
           : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         title="Semantic Passage Search"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <Search class="w-4.5 h-4.5 {activeView === 'search' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
           {#if !isCollapsed}
             <span>Search</span>
@@ -195,12 +195,12 @@
           onSelectScope('all');
           onSelectView('collections');
         }}
-        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all'
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all'
           ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
           : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         title="All Collections"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <FolderKanban class="w-4.5 h-4.5 {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'all' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
           {#if !isCollapsed}
             <span>All Collections</span>
@@ -218,12 +218,12 @@
         <button
           type="button"
           onclick={() => onSelectView('admin')}
-          class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'admin'
+          class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'admin'
             ? 'bg-blue-600 text-white font-semibold shadow-2xs'
             : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
           title="Admin & Resources"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5">
             <SlidersHorizontal class="w-4.5 h-4.5 {activeView === 'admin' ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}" />
             {#if !isCollapsed}
               <span>Admin &amp; Resources</span>
@@ -252,10 +252,10 @@
       {/if}
     </div>
 
-    <!-- Scopes Section -->
-    <div class="space-y-1 pt-2">
+    <!-- Scopes Section - Fixed in view (shrink-0) -->
+    <div class="space-y-0.5 pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80 shrink-0">
       {#if !isCollapsed}
-        <div class="px-2 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-0.5">
           Scopes
         </div>
       {/if}
@@ -268,12 +268,12 @@
           onSelectCollection(null);
           onSelectScope('mine');
         }}
-        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine'
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine'
           ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold'
           : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
         title="Personal Scope"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <User class="w-4.5 h-4.5 {activeView === 'collections' && selectedCollectionId === null && selectedScope === 'mine' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500 dark:text-neutral-400'}" />
           {#if !isCollapsed}
             <span>Personal</span>
@@ -298,10 +298,10 @@
             onSelectScope('team');
           }
         }}
-        class="w-full flex items-center {isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'} rounded-xl font-medium transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100"
+        class="w-full flex items-center {isCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'} rounded-xl font-medium transition-colors cursor-pointer text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100"
         title="Shared Knowledge (Team & Org)"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <Users class="w-4.5 h-4.5 text-neutral-500 dark:text-neutral-400" />
           {#if !isCollapsed}
             <span>Shared</span>
@@ -369,21 +369,25 @@
       {/if}
     </div>
 
-    <!-- Collections Quick List -->
+    <!-- Collections List - Dedicated Scrollable Container with Custom Pretty Scrollbar -->
     {#if !isCollapsed}
-      <div class="pt-2">
-        <div class="px-2 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1.5">
-          Collections
+      <div class="flex-1 flex flex-col min-h-0 pt-1.5 border-t border-neutral-100 dark:border-neutral-800/80">
+        <div class="px-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1 flex items-center justify-between shrink-0">
+          <span>Collections</span>
+          <span class="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
+            {collections.length}
+          </span>
         </div>
-        <div class="space-y-0.5 max-h-48 overflow-y-auto">
+        <div class="flex-1 min-h-0 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
           {#each collections as col (col.id)}
             {@const isSelected = selectedCollectionId === col.id}
             <button
               type="button"
               onclick={() => onSelectCollection(col.id)}
-              class="w-full text-left px-3 py-1.5 rounded-lg text-sm truncate transition-colors cursor-pointer {isSelected
+              class="w-full text-left px-2.5 py-1.5 rounded-lg text-sm truncate transition-colors cursor-pointer {isSelected
                 ? 'bg-blue-600 text-white font-medium shadow-2xs'
                 : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+              title={col.name}
             >
               {col.name}
             </button>
@@ -394,18 +398,18 @@
   </div>
 
   <!-- User Footer Area: Storage Quota -> Dark/Light Toggle -> User Profile -->
-  <div class="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/90 space-y-2.5 shrink-0">
+  <div class="p-2.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/90 space-y-2 shrink-0">
     <!-- 1. Storage Widget -->
     {#if !isCollapsed}
       {#if currentUser.systemRole !== 'viewer'}
         <!-- Personal Storage Quota Widget -->
-        <div class="p-2.5 bg-white dark:bg-neutral-800/90 rounded-xl border border-neutral-200 dark:border-neutral-700/80 space-y-1.5 shadow-2xs">
+        <div class="p-2 bg-white dark:bg-neutral-800/90 rounded-xl border border-neutral-200 dark:border-neutral-700/80 space-y-1 shadow-2xs">
           <div class="flex items-center justify-between text-xs">
             <span class="font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
               <HardDrive class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Personal Storage</span>
             </span>
-            <span class="font-mono text-neutral-500 dark:text-neutral-400 text-xs tabular-nums">
+            <span class="font-mono text-neutral-500 dark:text-neutral-400 text-[11px] tabular-nums">
               {formatBytes(personalUsedBytes)} / {personalCapGb} GB
             </span>
           </div>
@@ -417,7 +421,7 @@
           </div>
         </div>
       {:else}
-        <div class="p-2.5 bg-neutral-100 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-2">
+        <div class="p-2 bg-neutral-100 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-2">
           <Lock class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
           <span>Read-Only Viewer Account</span>
         </div>
@@ -437,7 +441,7 @@
         <button
           type="button"
           onclick={onToggleDarkMode}
-          class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-neutral-800/90 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-xs font-medium text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer shadow-2xs"
+          class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white dark:bg-neutral-800/90 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/80 text-xs font-medium text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer shadow-2xs"
           title={isDarkMode ? 'Switch to Light mode' : 'Switch to Dark mode'}
         >
           <div class="flex items-center gap-2">
@@ -476,14 +480,14 @@
         <button
           type="button"
           onclick={() => onSelectView('admin')}
-          class="w-full flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/60 p-2 rounded-xl transition-colors text-left"
+          class="w-full flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/60 p-1.5 rounded-xl transition-colors text-left"
           title="Click to open Admin & Resource Governance"
         >
           <div class="min-w-0">
             <div class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
               <span>{currentUser.name}</span>
             </div>
-            <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+            <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
               {currentUser.role}
             </div>
           </div>
@@ -498,12 +502,12 @@
           </span>
         </button>
       {:else}
-        <div class="w-full flex items-center justify-between text-xs p-2 rounded-xl text-left">
+        <div class="w-full flex items-center justify-between text-xs p-1.5 rounded-xl text-left">
           <div class="min-w-0">
             <div class="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate flex items-center gap-1.5">
               <span>{currentUser.name}</span>
             </div>
-            <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+            <div class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
               {currentUser.role}
             </div>
           </div>
