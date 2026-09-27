@@ -20,9 +20,7 @@
     Loader2
   } from '@lucide/svelte';
   import { fade, fly } from 'svelte/transition';
-  import type { Collection, DocumentItem, DocumentPage } from '../types';
-  import { executeChunkSearch } from '../utils/retrieval';
-  import { SAMPLE_SEARCH_QUERIES } from '../data/mockData';
+  import type { Collection, DocumentChunk, DocumentItem, DocumentPage, SearchResultChunk } from '../types';
   import HighlightedSnippet from './HighlightedSnippet.svelte';
   import PdfPageThumbnail from './PdfPageThumbnail.svelte';
 
@@ -38,8 +36,9 @@
   let hasSearched = $state(false);
   let isSearching = $state(false);
   let searchMode = $state<'hybrid' | 'dense' | 'lexical'>('hybrid');
-  let scope = $state<'all' | 'mine' | 'team' | 'org'>('all');
+  let scope = $state<'all' | 'org' | 'team' | 'project'>('all');
   let selectedTeam = $state<string>('all');
+  let selectedProject = $state<string>('all');
   let selectedCollectionId = $state<string>('all');
   let resultLimit = $state<number>(10);
   let selectedChunkId = $state<string | null>(null);
@@ -55,14 +54,29 @@
     ).sort()
   );
 
-  // Filter collections based on selected scope and team
+  // Extract all distinct project names from collections
+  let availableProjects = $derived(
+    Array.from(
+      new Set(
+        collections
+          .filter((c) => c.scope === 'project' && c.projectName)
+          .map((c) => c.projectName as string)
+      )
+    ).sort()
+  );
+
+  // Filter collections based on selected scope and team/project
   let filteredCollections = $derived(
     collections.filter((c) => {
-      if (scope === 'mine') return c.scope === 'mine';
       if (scope === 'org') return c.scope === 'org';
       if (scope === 'team') {
         if (c.scope !== 'team') return false;
         if (selectedTeam !== 'all') return c.teamName === selectedTeam;
+        return true;
+      }
+      if (scope === 'project') {
+        if (c.scope !== 'project') return false;
+        if (selectedProject !== 'all') return c.projectName === selectedProject;
         return true;
       }
       return true;
@@ -79,26 +93,17 @@
     }
   });
 
-  let searchExecution = $derived(
-    hasSearched && query.trim()
-      ? executeChunkSearch(
-          {
-            query,
-            scope,
-            teamName: scope === 'team' ? selectedTeam : undefined,
-            collectionId: selectedCollectionId,
-            topK: resultLimit,
-            minScoreThreshold: 0.12,
-            searchMode,
-          },
-          documents,
-          collections
-        )
-      : { results: [], totalChunksEvaluated: 0, durationMs: 0 }
-  );
+  const REAL_SAMPLE_QUERIES = [
+    '100G optical transceiver modules QSFP28',
+    'C++ exception handling stack unwinding Windows x64',
+    'OLAP multidimensional cubes and data mining queries',
+    'CORDIS European research frameworks and grants',
+    'Exception specifications Koenig and Stroustrup 1989',
+    'Decision support systems and star schema warehouse'
+  ];
 
-  let results = $derived(searchExecution.results);
-  let durationMs = $derived(searchExecution.durationMs);
+  let results = $state<SearchResultChunk[]>([]);
+  let durationMs = $state<number>(0);
 
   // Automatically select the top result if current selection is invalid or null
   let activeResult = $derived(
@@ -116,14 +121,126 @@
   }
 
   async function handleExecuteSearch() {
-    if (!query.trim()) return;
+    const q = query.trim();
+    if (!q) return;
     hasSearched = true;
     isSearching = true;
     selectedChunkId = null;
+    const startTime = performance.now();
 
-    // Simulate realistic neural retrieval latency (embedding generation + reranking)
-    await new Promise((r) => setTimeout(r, 450));
-    isSearching = false;
+    try {
+      const response = await fetch('http://localhost:8080/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: q,
+          collection_name: selectedCollectionId === 'all' ? 'all' : selectedCollectionId,
+          scope: scope === 'all' ? 'all' : scope,
+          top_k: resultLimit,
+          search_mode: searchMode
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Search failed with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      durationMs = Math.round(performance.now() - startTime);
+
+      const mappedResults: SearchResultChunk[] = (data.results || []).map((hit: any) => {
+        const colId = hit.collection_id || hit.collection_name;
+        const colName = hit.collection_name || 'General';
+        const docName = hit.doc_name || hit.pdf_filename;
+        const pdfFilename = hit.pdf_filename || `${docName}.pdf`;
+
+        const matchedDoc = documents.find(
+          (d) => d.filename === pdfFilename || d.title === docName || d.title.toLowerCase() === docName.toLowerCase()
+        );
+        const matchedCol = collections.find(
+          (c) => c.id === colId || c.name === colName || (c as any).collection_name === colId
+        );
+
+        const pageNum = hit.page_number || 1;
+        const chunkIndex = hit.chunk_index ?? 0;
+        const fullText = hit.full_text || hit.excerpt || '';
+
+        const chunk: DocumentChunk = {
+          id: `${colId}-chunk-${hit.chunk_id}`,
+          docId: matchedDoc?.id || `doc-${hit.chunk_id}`,
+          collectionId: colId,
+          pageNumber: pageNum,
+          chunkIndex: chunkIndex,
+          tokenCount: Math.max(1, fullText.split(/\s+/).length),
+          snippet: fullText,
+          startOffset: 0,
+          endOffset: hit.char_count || fullText.length,
+          sectionHeading: `Page ${pageNum} · Section ${chunkIndex + 1}`,
+          entities: [],
+          scope: matchedCol?.scope || 'org',
+          keywords: []
+        };
+
+        const documentItem: DocumentItem = matchedDoc || {
+          id: `doc-${hit.chunk_id}`,
+          collectionId: colId,
+          collections: [colId, 'all_knowledge_base'],
+          title: docName,
+          filename: pdfFilename,
+          pdfUrl: hit.pdf_url || `http://localhost:8080/data/${pdfFilename}`,
+          fileType: 'pdf',
+          source: 'drive',
+          uploadedAt: '2026-09-26T00:00:00Z',
+          uploadedBy: 'Enterprise Ingestion',
+          sizeBytes: 1024 * 1024 * 2,
+          pageCount: pageNum,
+          chunkCount: 1,
+          summary: hit.excerpt,
+          entities: [],
+          crossReferences: [],
+          semanticTopics: [colName],
+          pages: [
+            {
+              pageNumber: pageNum,
+              header: `Page ${pageNum}`,
+              content: fullText,
+              chunks: [chunk]
+            }
+          ]
+        };
+
+        const collectionItem: Collection = matchedCol || {
+          id: colId,
+          name: colName,
+          description: `Knowledge Collection: ${colName}`,
+          scope: 'org',
+          createdBy: { name: 'Enterprise Ingestion', email: 'system@enterprise.corp' },
+          createdAt: '2026-09-26T00:00:00Z',
+          updatedAt: '2026-09-26T00:00:00Z',
+          documentCount: 1,
+          totalChunks: 1,
+          tags: ['Milvus Live', colName]
+        };
+
+        return {
+          chunk,
+          document: documentItem,
+          collection: collectionItem,
+          score: hit.score,
+          bm25Score: hit.bm25_score,
+          semanticScore: hit.dense_score,
+          highlightIndices: []
+        };
+      });
+
+      results = mappedResults;
+    } catch (err) {
+      console.error('Milvus search error:', err);
+      results = [];
+      durationMs = Math.round(performance.now() - startTime);
+    } finally {
+      isSearching = false;
+    }
   }
 
   function handleQuickQuery(sample: string) {
@@ -136,6 +253,7 @@
     hasSearched = false;
     isSearching = false;
     selectedChunkId = null;
+    results = [];
   }
 </script>
 
@@ -227,7 +345,7 @@
 
         <!-- Accessible Direct Controls Strip -->
         <div class="p-3.5 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-3 text-left">
-          <div class="grid grid-cols-1 sm:grid-cols-2 {scope === 'team' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 text-xs transition-all">
+          <div class="grid grid-cols-1 sm:grid-cols-2 {scope === 'team' || scope === 'project' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 text-xs transition-all">
             <!-- 1. Retrieval Mode -->
             <div>
               <span class="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-1.5">
@@ -299,9 +417,9 @@
                 class="w-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1.5 px-2 rounded-lg text-xs border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer"
               >
                 <option value="all">All Scopes</option>
-                <option value="mine">Personal</option>
+                <option value="org">Organization (Org)</option>
                 <option value="team">Team Knowledge</option>
-                <option value="org">Organization</option>
+                <option value="project">Project Scope</option>
               </select>
             </div>
 
@@ -319,6 +437,25 @@
                   <option value="all">All Teams ({availableTeams.length})</option>
                   {#each availableTeams as team}
                     <option value={team}>{team}</option>
+                  {/each}
+                </select>
+              </div>
+            {/if}
+
+            <!-- 5. Project Selector (visible if scope === 'project') -->
+            {#if scope === 'project'}
+              <div in:fly={{ y: -4, duration: 150 }}>
+                <label for="hero-project-select" class="block text-[11px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1.5">
+                  Select Project
+                </label>
+                <select
+                  id="hero-project-select"
+                  bind:value={selectedProject}
+                  class="w-full bg-purple-50/80 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 font-medium py-1.5 px-2 rounded-lg text-xs border border-purple-300 dark:border-purple-800 focus:outline-hidden cursor-pointer truncate"
+                >
+                  <option value="all">All Projects ({availableProjects.length})</option>
+                  {#each availableProjects as proj}
+                    <option value={proj}>{proj}</option>
                   {/each}
                 </select>
               </div>
@@ -351,7 +488,7 @@
           </div>
 
           <div class="flex flex-wrap items-center justify-center gap-2">
-            {#each SAMPLE_SEARCH_QUERIES as sample, idx (idx)}
+            {#each REAL_SAMPLE_QUERIES as sample, idx (idx)}
               <button
                 type="button"
                 onclick={() => handleQuickQuery(sample)}
@@ -428,7 +565,7 @@
             <Sparkles class="w-3 h-3 text-amber-500" />
             <span>Try:</span>
           </span>
-          {#each SAMPLE_SEARCH_QUERIES as sample, idx (idx)}
+          {#each REAL_SAMPLE_QUERIES as sample, idx (idx)}
             <button
               type="button"
               onclick={() => handleQuickQuery(sample)}
@@ -521,9 +658,9 @@
               class="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 py-1 px-2 rounded-md text-[11px] border border-neutral-200 dark:border-neutral-700 focus:outline-hidden cursor-pointer"
             >
               <option value="all">All Scopes</option>
-              <option value="mine">Personal</option>
+              <option value="org">Organization (Org)</option>
               <option value="team">Team</option>
-              <option value="org">Organization</option>
+              <option value="project">Project</option>
             </select>
           </div>
 
@@ -542,6 +679,26 @@
                 <option value="all">All Teams ({availableTeams.length})</option>
                 {#each availableTeams as team}
                   <option value={team}>{team}</option>
+                {/each}
+              </select>
+            </div>
+          {/if}
+
+          <!-- Project Selector (appears when scope === 'project') -->
+          {#if scope === 'project'}
+            <div in:fly={{ x: -4, duration: 150 }} class="flex items-center gap-1 text-[11px]">
+              <label for="top-project-select" class="text-purple-600 dark:text-purple-400 font-medium">Project:</label>
+              <select
+                id="top-project-select"
+                bind:value={selectedProject}
+                onchange={() => {
+                  if (hasSearched) handleExecuteSearch();
+                }}
+                class="bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium py-1 px-2 rounded-md text-[11px] border border-purple-200 dark:border-purple-900/60 focus:outline-hidden cursor-pointer max-w-44 truncate"
+              >
+                <option value="all">All Projects ({availableProjects.length})</option>
+                {#each availableProjects as proj}
+                  <option value={proj}>{proj}</option>
                 {/each}
               </select>
             </div>

@@ -23,8 +23,9 @@ export function getCollectionUsedBytes(collectionId: string, documents: Document
     .reduce((acc, d) => acc + (d.sizeBytes || 0), 0);
 }
 
-export function getScopeUsedBytes(scope: 'mine' | 'team' | 'org', documents: DocumentItem[], collections: Collection[]): number {
-  const colIdsInScope = new Set(collections.filter((c) => c.scope === scope).map((c) => c.id));
+export function getScopeUsedBytes(scope: 'org' | 'team' | 'project' | 'mine', documents: DocumentItem[], collections: Collection[]): number {
+  const targetScope = scope === 'mine' ? 'project' : scope;
+  const colIdsInScope = new Set(collections.filter((c) => c.scope === targetScope).map((c) => c.id));
   return documents
     .filter((d) => colIdsInScope.has(d.collectionId))
     .reduce((acc, d) => acc + (d.sizeBytes || 0), 0);
@@ -62,14 +63,11 @@ export function checkCollectionQuota(
   const currentUsedBytes = getCollectionUsedBytes(collection.id, documents);
   const projectedUsedBytes = currentUsedBytes + additionalBytes;
 
-  // Determine effective allocated GB for this collection
   let effectiveAllocatedGb = collection.allocatedGb || 0;
 
-  if (collection.scope === 'mine') {
-    // If not specifically set on collection, falls back to personal per-user cap
-    effectiveAllocatedGb = collection.allocatedGb || scopeAllocation.personalPerUserCapGb;
+  if (collection.scope === 'project') {
+    effectiveAllocatedGb = collection.allocatedGb || scopeAllocation.projectPoolQuotaGb || 20;
   } else if (collection.scope === 'team') {
-    // Check team allocations
     const teamRecord = teamAllocations.find(
       (t) => t.teamName.toLowerCase() === (collection.teamName || '').toLowerCase()
     );

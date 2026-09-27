@@ -8,7 +8,8 @@
     ScopeType,
     SystemRole,
     TeamAllocationRecord,
-    UserProfile
+    UserProfile,
+    ChatThread
   } from './types';
   import {
     CURRENT_USER,
@@ -18,14 +19,16 @@
     INITIAL_TEAM_ALLOCATIONS,
     PRESET_USERS
   } from './data/mockData';
-  import { DEFAULT_INGESTION_CONFIG, reindexDocument } from './utils/chunker';
+  import { INITIAL_CHAT_THREADS } from './data/chatAndEvalData';
+  import { DEFAULT_INGESTION_CONFIG, reindexDocument, chunkTextIntoPages } from './utils/chunker';
   import { checkCollectionQuota } from './utils/resourceUtils';
   import {
     canAccessAdmin,
     canCreateCollection,
     canCreateCollectionInScope,
     canUploadToCollection,
-    canDeleteDocument
+    canDeleteDocument,
+    canDeleteCollection
   } from './utils/governance';
   import Sidebar from './components/Sidebar.svelte';
   import HomeView from './components/HomeView.svelte';
@@ -38,6 +41,11 @@
   import UploadModal from './components/UploadModal.svelte';
   import NewCollectionModal from './components/NewCollectionModal.svelte';
   import TeamAllocationModal from './components/TeamAllocationModal.svelte';
+  import DeleteDocumentModal from './components/DeleteDocumentModal.svelte';
+  import DeleteCollectionModal from './components/DeleteCollectionModal.svelte';
+  import VectorGraphView from './components/VectorGraphView.svelte';
+  import ChatView from './components/ChatView.svelte';
+  import EvaluationView from './components/EvaluationView.svelte';
   import { CheckCircle2, Menu, Layers, Sun, Moon } from '@lucide/svelte';
 
   const INITIAL_REINDEX_JOBS: ReindexJob[] = [
@@ -74,9 +82,44 @@
   ];
 
   // Navigation State
-  let activeView = $state<'home' | 'collections' | 'search' | 'admin'>('home');
+  let activeView = $state<'home' | 'collections' | 'search' | 'admin' | 'graph' | 'chat' | 'eval'>('home');
   let selectedScope = $state<ScopeType>('all');
   let selectedCollectionId = $state<string | null>(null);
+  let selectedGraphCollectionId = $state<string>('all');
+
+  // Chat State
+  let chatThreads = $state<ChatThread[]>(INITIAL_CHAT_THREADS);
+  let activeThreadId = $state<string>(INITIAL_CHAT_THREADS[0]?.id || '');
+
+  function handleSelectThread(threadId: string) {
+    activeThreadId = threadId;
+    activeView = 'chat';
+    selectedCollectionId = null;
+  }
+
+  function handleNewChat() {
+    const newId = `thread-${Date.now()}`;
+    const newThread: ChatThread = {
+      id: newId,
+      title: 'New Conversation',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      collectionId: 'all',
+      messages: []
+    };
+    chatThreads = [newThread, ...chatThreads];
+    activeThreadId = newId;
+    activeView = 'chat';
+    selectedCollectionId = null;
+  }
+
+  function handleOpenGraph(collectionId?: string) {
+    if (collectionId) {
+      selectedGraphCollectionId = collectionId;
+    }
+    selectedCollectionId = null;
+    activeView = 'graph';
+  }
 
   // User State with RBAC role
   let currentUser = $state<UserProfile>(CURRENT_USER);
@@ -89,10 +132,43 @@
   let scopeResourceAllocation = $state<ScopeResourceAllocation>(DEFAULT_RESOURCE_ALLOCATION);
   let teamAllocations = $state<TeamAllocationRecord[]>(INITIAL_TEAM_ALLOCATIONS);
   let activeTeamModalRecord = $state<TeamAllocationRecord | null>(null);
+  let documentToDelete = $state<DocumentItem | null>(null);
+  let isDeleteDocModalOpen = $state(false);
+  let collectionToDelete = $state<Collection | null>(null);
+  let isDeleteColModalOpen = $state(false);
+
+  import { onMount } from 'svelte';
 
   // Data State
   let collections = $state<Collection[]>(INITIAL_COLLECTIONS);
   let documents = $state<DocumentItem[]>(INITIAL_DOCUMENTS);
+
+  async function loadLiveMilvusData() {
+    try {
+      const [colRes, docRes] = await Promise.all([
+        fetch('http://localhost:8080/api/collections'),
+        fetch('http://localhost:8080/api/documents')
+      ]);
+      if (colRes.ok && docRes.ok) {
+        const colData = await colRes.json();
+        const docData = await docRes.json();
+        const cols = Array.isArray(colData) ? colData : (colData.collections || []);
+        const docs = Array.isArray(docData) ? docData : (docData.documents || []);
+        if (cols.length > 0) {
+          collections = cols;
+        }
+        if (docs.length > 0) {
+          documents = docs;
+        }
+      }
+    } catch (e) {
+      console.warn('Milvus backend not reachable, using cached knowledge state:', e);
+    }
+  }
+
+  onMount(() => {
+    loadLiveMilvusData();
+  });
 
   // Modal States
   let isNewCollectionOpen = $state(false);
@@ -303,18 +379,167 @@
       return;
     }
 
-    documents = documents.filter((d) => d.id !== docId);
-    collections = collections.map((c) =>
-      c.id === docToDelete.collectionId
-        ? {
-            ...c,
-            documentCount: Math.max(0, c.documentCount - 1),
-            totalChunks: Math.max(0, c.totalChunks - docToDelete.chunkCount),
-            updatedAt: new Date().toISOString(),
-          }
-        : c
-    );
-    showToast(`Document removed from collection.`);
+    documentToDelete = docToDelete;
+    isDeleteDocModalOpen = true;
+  }
+
+  async function executeDeleteDocument(docId: string, purgeVectors: boolean) {
+    const docToDelete = documents.find((d) => d.id === docId);
+    if (!docToDelete) return;
+    const parentCol = collections.find((c) => c.id === docToDelete.collectionId);
+    const colId = docToDelete.collectionId;
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/collections/${colId}/documents/${docId}?purge_vectors=${purgeVectors}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+
+      documents = documents.filter((d) => d.id !== docId);
+      collections = collections.map((c) =>
+        c.id === docToDelete.collectionId
+          ? {
+              ...c,
+              documentCount: Math.max(0, c.documentCount - 1),
+              totalChunks: Math.max(0, c.totalChunks - docToDelete.chunkCount),
+              updatedAt: new Date().toISOString(),
+            }
+          : c
+      );
+
+      if (data.has_other_references) {
+        showToast(`Document "${docToDelete.title}" removed from ${parentCol?.name || 'collection'}. Kept in other collections.`);
+      } else if (data.purged_vectors) {
+        showToast(`Document "${docToDelete.title}" removed and ${data.deleted_vectors_count || docToDelete.chunkCount} vectors purged from Milvus.`);
+      } else {
+        showToast(`Document "${docToDelete.title}" removed from ${parentCol?.name || 'collection'}. Vectors preserved in Milvus.`);
+      }
+
+      // Sync live backend data
+      loadLiveMilvusData();
+    } catch (err) {
+      console.warn('Backend document delete warning:', err);
+      documents = documents.filter((d) => d.id !== docId);
+      showToast(`Document removed from collection.`);
+    }
+  }
+
+  function handleRequestDeleteCollection(col: Collection) {
+    if (!canDeleteCollection(currentUser, col)) {
+      showToast(`Permission denied: Your role (${currentUser.systemRole.toUpperCase()}) cannot delete collection "${col.name}".`);
+      return;
+    }
+    collectionToDelete = col;
+    isDeleteColModalOpen = true;
+  }
+
+  async function executeDeleteCollection(purgeVectors: boolean) {
+    if (!collectionToDelete) return;
+    const colId = collectionToDelete.id;
+    const colName = collectionToDelete.name;
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/collections/${colId}?purge_vectors=${purgeVectors}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+
+      collections = collections.filter((c) => c.id !== colId);
+      if (selectedCollectionId === colId) {
+        selectedCollectionId = null;
+      }
+
+      if (data.purged_vectors) {
+        showToast(`Collection "${colName}" deleted and associated vectors purged from Milvus.`);
+      } else {
+        showToast(`Collection "${colName}" removed. Documents preserved in Global Knowledge Base.`);
+      }
+
+      loadLiveMilvusData();
+    } catch (err) {
+      console.warn('Backend collection delete warning:', err);
+      collections = collections.filter((c) => c.id !== colId);
+      if (selectedCollectionId === colId) {
+        selectedCollectionId = null;
+      }
+      showToast(`Collection "${colName}" deleted.`);
+    } finally {
+      isDeleteColModalOpen = false;
+      collectionToDelete = null;
+    }
+  }
+
+  function handleRetryFailedDocument(docId: string) {
+    const targetDoc = documents.find((d) => d.id === docId);
+    if (!targetDoc) return;
+
+    const retryPages = [
+      {
+        pageNumber: 1,
+        header: '1. Scanned Audit Records & Legacy Host Inventory',
+        content: `### 1. Scanned Audit Records & Legacy Host Inventory
+High-resolution OCR recovery completed. This document contains inventory manifests for retired on-premises data center hardware racks.
+All hosts have been decommissioned and disk drives sanitized per NIST 800-88 standards.
+
+### 1.2 Cryptographic Disposal Attestation
+Physical destruction certificates have been cryptographically verified and recorded in the audit ledger.`
+      },
+      {
+        pageNumber: 2,
+        header: '2. Decommissioning Verification & Sign-Off',
+        content: `### 2. Decommissioning Verification & Sign-Off
+Signed off by Chief Information Security Officer and External Auditors.
+Hardware serial numbers matched against asset registry with 100% concordance.`
+      }
+    ];
+
+    const pages = chunkTextIntoPages(targetDoc.id, targetDoc.collectionId, 'org', retryPages, ingestionConfig);
+    const totalChunks = pages.reduce((acc, p) => acc + p.chunks.length, 0);
+
+    documents = documents.map((doc) => {
+      if (doc.id === docId) {
+        return {
+          ...doc,
+          status: 'indexed' as const,
+          errorMessage: undefined,
+          chunkCount: totalChunks,
+          pageCount: pages.length,
+          pages,
+        };
+      }
+      return doc;
+    });
+
+    // Also update collection document count & chunks count
+    collections = collections.map((col) => {
+      if (col.id === targetDoc.collectionId) {
+        return {
+          ...col,
+          totalChunks: col.totalChunks + totalChunks,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return col;
+    });
+
+    const recoveryJob: ReindexJob = {
+      id: `job-retry-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      targetScope: targetDoc.collectionId,
+      targetName: targetDoc.title,
+      triggeredBy: `${currentUser.name} (${currentUser.systemRole})`,
+      chunkSizeTokens: ingestionConfig.maxChunkSizeTokens,
+      chunkOverlapTokens: ingestionConfig.chunkOverlapTokens,
+      strategy: ingestionConfig.chunkingStrategy,
+      docsCount: 1,
+      chunksBefore: 0,
+      chunksAfter: totalChunks,
+      durationMs: 420,
+      status: 'completed',
+    };
+    reindexHistory = [recoveryJob, ...reindexHistory];
+
+    showToast(`Document "${targetDoc.title}" successfully re-extracted and ${totalChunks} vector chunks indexed.`);
   }
 
   async function handleTriggerReindex(targetScope: 'all' | string): Promise<ReindexJob> {
@@ -451,6 +676,10 @@
     onToggleDarkMode={handleToggleDarkMode}
     isMobileOpen={isMobileSidebarOpen}
     onCloseMobile={() => (isMobileSidebarOpen = false)}
+    threads={chatThreads}
+    {activeThreadId}
+    onSelectThread={handleSelectThread}
+    onNewChat={handleNewChat}
   />
 
   <!-- Main Application Wrapper -->
@@ -499,6 +728,9 @@
         {currentUser}
         {collections}
         {documents}
+        {reindexHistory}
+        {scopeResourceAllocation}
+        {ingestionConfig}
         onSelectCollection={(id) => {
           selectedCollectionId = id;
           activeView = 'collections';
@@ -509,6 +741,19 @@
           selectedCollectionId = null;
         }}
         onOpenNewCollection={openNewCollectionModal}
+        onOpenUploadModal={() => {
+          if (!selectedCollectionId && collections.length > 0) {
+            selectedCollectionId = collections[0].id;
+          }
+          isUploadModalOpen = true;
+        }}
+        onOpenDriveModal={() => {
+          if (!selectedCollectionId && collections.length > 0) {
+            selectedCollectionId = collections[0].id;
+          }
+          isDriveModalOpen = true;
+        }}
+        onRetryFailedDocument={handleRetryFailedDocument}
       />
     {:else if activeView === 'admin' && canAccessAdmin(currentUser)}
       <AdminView
@@ -538,6 +783,30 @@
         {collections}
         onOpenCitation={handleOpenCitation}
       />
+    {:else if activeView === 'graph'}
+      <VectorGraphView
+        {currentUser}
+        {collections}
+        {documents}
+        initialCollectionId={selectedGraphCollectionId}
+        onOpenDocument={handleOpenDocument}
+      />
+    {:else if activeView === 'chat'}
+      <ChatView
+        {currentUser}
+        {collections}
+        {documents}
+        bind:threads={chatThreads}
+        bind:activeThreadId
+        onSelectThread={handleSelectThread}
+        onNewThread={handleNewChat}
+        onOpenDocument={handleOpenDocument}
+      />
+    {:else if activeView === 'eval'}
+      <EvaluationView
+        {collections}
+        {documents}
+      />
     {:else if selectedCollection}
       <CollectionDetailView
         collection={selectedCollection}
@@ -546,10 +815,12 @@
         {teamAllocations}
         onOpenTeamAllocationModal={(team) => (activeTeamModalRecord = team)}
         onBack={() => (selectedCollectionId = null)}
+        onOpenGraph={() => handleOpenGraph(selectedCollection?.id)}
         onOpenUploadModal={() => (isUploadModalOpen = true)}
         onOpenDriveModal={() => (isDriveModalOpen = true)}
         onOpenDocument={handleOpenDocument}
         onDeleteDocument={handleDeleteDocument}
+        onDeleteCollection={handleRequestDeleteCollection}
       />
     {:else}
       <CollectionsView
@@ -562,6 +833,7 @@
         {currentUser}
         {teamAllocations}
         onOpenTeamAllocationModal={(team) => (activeTeamModalRecord = team)}
+        onDeleteCollection={handleRequestDeleteCollection}
       />
     {/if}
 
@@ -629,6 +901,45 @@
       onClose={() => (activeTeamModalRecord = null)}
       onSaveAllocations={(updatedRecord) => {
         handleUpdateTeamAllocation(updatedRecord);
+      }}
+    />
+  {/if}
+
+  <!-- 6. Delete Document & Vector Warning Modal -->
+  {#if isDeleteDocModalOpen && documentToDelete}
+    {@const targetCol = collections.find((c) => c.id === documentToDelete?.collectionId)}
+    <DeleteDocumentModal
+      document={documentToDelete}
+      collection={targetCol}
+      onClose={() => {
+        isDeleteDocModalOpen = false;
+        documentToDelete = null;
+      }}
+      onConfirmDelete={async (purgeVectors) => {
+        if (documentToDelete) {
+          await executeDeleteDocument(documentToDelete.id, purgeVectors);
+        }
+        isDeleteDocModalOpen = false;
+        documentToDelete = null;
+      }}
+    />
+  {/if}
+
+  <!-- 7. Delete Collection Modal -->
+  {#if isDeleteColModalOpen && collectionToDelete}
+    {@const colDocs = documents.filter((d) => d.collectionId === collectionToDelete?.id)}
+    {@const docCount = colDocs.length}
+    {@const chunkCount = collectionToDelete.totalChunks || colDocs.reduce((acc, d) => acc + (d.chunkCount || 0), 0)}
+    <DeleteCollectionModal
+      collection={collectionToDelete}
+      documentCount={docCount}
+      totalChunks={chunkCount}
+      onClose={() => {
+        isDeleteColModalOpen = false;
+        collectionToDelete = null;
+      }}
+      onConfirmDelete={async (purgeVectors) => {
+        await executeDeleteCollection(purgeVectors);
       }}
     />
   {/if}

@@ -1,13 +1,18 @@
 <script lang="ts">
-  import { FileText } from '@lucide/svelte';
-  import type { Collection } from '../types';
+  import { FileText, Trash2 } from '@lucide/svelte';
+  import type { Collection, UserProfile } from '../types';
+  import { canDeleteCollection } from '../utils/governance';
 
   interface Props {
     collection: Collection;
+    currentUser?: UserProfile;
     onselect: () => void;
+    onDelete?: (col: Collection) => void;
   }
 
-  let { collection, onselect }: Props = $props();
+  let { collection, currentUser, onselect, onDelete }: Props = $props();
+
+  let canDelete = $derived(canDeleteCollection(currentUser, collection));
 
   let formattedDate = $derived(
     new Date(collection.updatedAt).toLocaleDateString('en-US', {
@@ -34,11 +39,27 @@
   class="p-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between group"
 >
   <div>
-    <!-- Scope and Owner -->
-    <div class="flex items-center gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-2 truncate">
-      <span class="font-medium text-neutral-600 dark:text-neutral-300">{scopeLabel}</span>
-      <span aria-hidden="true">·</span>
-      <span class="truncate">{collection.createdBy.name}</span>
+    <!-- Scope and Owner + Quick Delete Button -->
+    <div class="flex items-center justify-between gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-2">
+      <div class="flex items-center gap-1.5 truncate">
+        <span class="font-medium text-neutral-600 dark:text-neutral-300">{scopeLabel}</span>
+        <span aria-hidden="true">·</span>
+        <span class="truncate">{collection.createdBy.name}</span>
+      </div>
+
+      {#if canDelete && onDelete}
+        <button
+          type="button"
+          onclick={(e) => {
+            e.stopPropagation();
+            onDelete(collection);
+          }}
+          class="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-all cursor-pointer"
+          title="Delete collection"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+        </button>
+      {/if}
     </div>
 
     <!-- Collection Title -->

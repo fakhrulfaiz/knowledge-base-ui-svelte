@@ -11,7 +11,9 @@
     AlertCircle,
     HardDrive,
     Trash2,
-    Sparkles
+    Sparkles,
+    Lock,
+    Globe
   } from '@lucide/svelte';
   import type { Collection, DocumentItem, IngestionConfig, UserProfile } from '../types';
   import { chunkTextIntoPages } from '../utils/chunker';
@@ -134,6 +136,7 @@ Upstream CA failover utilizes dual HSM-backed intermediate roots distributed acr
   let fileType = $state<'pdf' | 'docx' | 'md' | 'report'>('md');
   let docSummary = $state(SAMPLE_PRESETS[0].summary);
   let fileSize = $state<number>(SAMPLE_PRESETS[0].sizeBytes);
+  let visibility = $state<'shared' | 'private'>('shared');
 
   // Ingestion execution state
   let isProcessing = $state(false);
@@ -298,28 +301,70 @@ Automated telemetry scrapers report latency histograms and error budgets directl
     if (!docTitle.trim()) return;
 
     isProcessing = true;
-    stepMessage = 'Reading document binary stream and metadata...';
-    await new Promise((r) => setTimeout(r, 350));
+    let actualDocId = `doc-upload-${Date.now()}`;
+    let finalDoc: DocumentItem | null = null;
 
-    stepMessage = 'Extracting document layout, sections & readable text...';
-    await new Promise((r) => setTimeout(r, 400));
+    try {
+      if (selectedFile) {
+        stepMessage = `Uploading '${selectedFile.name}' to Drive (/data)...`;
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        const upRes = await fetch('http://localhost:8080/api/drive/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-    const tokenTarget = ingestionConfig?.maxChunkSizeTokens || 256;
-    const overlap = ingestionConfig?.chunkOverlapTokens || 32;
-    stepMessage = `Tokenizing chunks (${tokenTarget}t target, ${overlap}t overlap)...`;
-    await new Promise((r) => setTimeout(r, 400));
+        if (upRes.ok) {
+          const upData = await upRes.json();
+          filename = upData.filename || selectedFile.name;
 
-    stepMessage = `Generating dense embeddings & indexing into ${collection.name}...`;
-    await new Promise((r) => setTimeout(r, 350));
+          stepMessage = `Invoking Standalone Extractor Service for '${filename}'...`;
+          try {
+            await fetch('http://localhost:8080/api/pipeline/extract', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename }),
+            });
+          } catch (e) {
+            console.warn('Extractor call finished with warning:', e);
+          }
+
+          stepMessage = `Registering document into collection '${collection.name}'...`;
+          const regRes = await fetch(`http://localhost:8080/api/collections/${collection.id}/documents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename,
+              title: docTitle.trim(),
+              visibility,
+              source: 'upload',
+              uploadedBy: currentUser?.name || 'Elena Rostova',
+            }),
+          });
+
+          if (regRes.ok) {
+            const regData = await regRes.json();
+            if (regData.document) {
+              actualDocId = regData.document.id;
+              finalDoc = regData.document;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Live backend upload encountered an error, falling back to local indexing:', err);
+    }
+
+    stepMessage = `Generating token chunks for neural index...`;
+    await new Promise((r) => setTimeout(r, 200));
 
     const rawPagesToChunk =
       selectedFile && uploadedFileRawPages.length > 0
         ? uploadedFileRawPages
         : SAMPLE_PRESETS[selectedPresetIndex].pages;
 
-    const docId = `doc-upload-${Date.now()}`;
     const chunkedPages = chunkTextIntoPages(
-      docId,
+      actualDocId,
       collection.id,
       collection.scope,
       rawPagesToChunk,
@@ -328,12 +373,13 @@ Automated telemetry scrapers report latency histograms and error budgets directl
     const totalChunks = chunkedPages.reduce((acc, p) => acc + p.chunks.length, 0);
 
     const newDoc: DocumentItem = {
-      id: docId,
+      id: actualDocId,
       collectionId: collection.id,
       title: docTitle.trim(),
       filename: filename.trim(),
       fileType,
       source: 'upload',
+      visibility,
       uploadedAt: new Date().toISOString(),
       uploadedBy: currentUser?.name || 'Elena Rostova',
       sizeBytes: fileSize,
@@ -344,18 +390,18 @@ Automated telemetry scrapers report latency histograms and error budgets directl
         collection.name,
         fileType.toUpperCase(),
         'Enterprise Knowledge',
-        'Zero Trust'
+        collection.scope.toUpperCase()
       ],
       crossReferences: [],
       semanticTopics: [
-        collection.scope === 'team' ? collection.teamName || 'Team' : collection.scope,
+        collection.scope === 'team' ? collection.teamName || 'Team' : collection.scope === 'project' ? collection.projectName || 'Project' : collection.scope,
         'Uploaded Spec',
         fileType
       ],
       pages: chunkedPages,
     };
 
-    const success = onUploadComplete(newDoc);
+    const success = onUploadComplete(finalDoc ? { ...finalDoc, pages: chunkedPages, visibility } : newDoc);
     isProcessing = false;
 
     if (success !== false) {
@@ -626,6 +672,61 @@ Automated telemetry scrapers report latency histograms and error budgets directl
               <option value="md">Markdown (.md)</option>
               <option value="report">Engineering Report (.report)</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Document Privacy & Scope Governance (User Prompt requirement) -->
+        <div class="pt-2 border-t border-neutral-100 dark:border-neutral-800">
+          <div class="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1.5 flex items-center justify-between">
+            <span>Document Access Policy</span>
+            <span class="text-[10px] text-neutral-400 font-normal font-mono">Scoped to {collection.name} ({collection.scope.toUpperCase()})</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onclick={() => (visibility = 'shared')}
+              class="p-2.5 rounded-lg border text-left flex items-start gap-2.5 transition-all cursor-pointer {visibility === 'shared'
+                ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-500 ring-2 ring-blue-500/20 text-neutral-900 dark:text-neutral-100'
+                : 'bg-white dark:bg-neutral-800/60 border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 text-neutral-600 dark:text-neutral-400'}"
+            >
+              <div class="p-1 rounded-md mt-0.5 {visibility === 'shared' ? 'bg-blue-600 text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}">
+                <Globe class="w-3.5 h-3.5" />
+              </div>
+              <div class="space-y-0.5">
+                <div class="font-semibold text-xs flex items-center gap-1.5">
+                  <span>Shared</span>
+                  {#if visibility === 'shared'}
+                    <span class="text-[9px] bg-blue-600 text-white px-1 py-0.2 rounded font-mono">ACTIVE</span>
+                  {/if}
+                </div>
+                <p class="text-[10px] leading-tight opacity-80">
+                  Shared across this collection for {collection.scope.toUpperCase()} collaborators.
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onclick={() => (visibility = 'private')}
+              class="p-2.5 rounded-lg border text-left flex items-start gap-2.5 transition-all cursor-pointer {visibility === 'private'
+                ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-500 ring-2 ring-amber-500/20 text-neutral-900 dark:text-neutral-100'
+                : 'bg-white dark:bg-neutral-800/60 border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 text-neutral-600 dark:text-neutral-400'}"
+            >
+              <div class="p-1 rounded-md mt-0.5 {visibility === 'private' ? 'bg-amber-600 text-white' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500'}">
+                <Lock class="w-3.5 h-3.5" />
+              </div>
+              <div class="space-y-0.5">
+                <div class="font-semibold text-xs flex items-center gap-1.5">
+                  <span>Private (Personal)</span>
+                  {#if visibility === 'private'}
+                    <span class="text-[9px] bg-amber-600 text-white px-1 py-0.2 rounded font-mono">PRIVATE</span>
+                  {/if}
+                </div>
+                <p class="text-[10px] leading-tight opacity-80">
+                  Personal file; only visible to you in this collection until shared.
+                </p>
+              </div>
+            </button>
           </div>
         </div>
       </div>

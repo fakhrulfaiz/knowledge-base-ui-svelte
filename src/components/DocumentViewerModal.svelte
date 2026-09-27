@@ -9,7 +9,9 @@
     Copy,
     Check,
     Info,
-    Layers
+    Layers,
+    ExternalLink,
+    FileText
   } from '@lucide/svelte';
   import type { DocumentItem } from '../types';
   import PdfPageThumbnail from './PdfPageThumbnail.svelte';
@@ -35,6 +37,13 @@
   let viewMode = $state<'pdf' | 'flow'>('pdf');
   let copied = $state(false);
   let showDetails = $state(false);
+
+  let pdfUrl = $derived(
+    doc.pdfUrl || (doc.filename ? `http://localhost:8080/data/${doc.filename}` : '')
+  );
+  let pdfPageUrl = $derived(
+    pdfUrl ? `${pdfUrl}#page=${currentPageNum}` : ''
+  );
 
   let currentPage = $derived(
     doc.pages.find((p) => p.pageNumber === currentPageNum) || doc.pages[0]
@@ -191,31 +200,46 @@
           </button>
         </div>
 
-        <!-- View Mode Toggle: Formatted PDF vs Flow -->
+        <!-- View Mode Toggle -->
         <div class="hidden md:flex items-center p-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md border border-neutral-200 dark:border-neutral-700 text-xs">
           <button
             type="button"
             onclick={() => (viewMode = 'pdf')}
-            class="px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer {viewMode === 'pdf'
-              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-2xs'
+            class="px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 {viewMode === 'pdf'
+              ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 font-semibold shadow-2xs'
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}"
+            title="Native PDF Preview from /data directory"
           >
-            PDF Page
+            <span>Live PDF (/data)</span>
           </button>
           <button
             type="button"
             onclick={() => (viewMode = 'flow')}
-            class="px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer {viewMode === 'flow'
-              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-2xs'
+            class="px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 {viewMode === 'flow'
+              ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-semibold shadow-2xs'
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200'}"
+            title="Extracted Text Passages with Citation Highlights"
           >
-            Clean Flow
+            <span>Extracted Flow</span>
           </button>
         </div>
       </div>
 
       <!-- Right: Actions -->
       <div class="flex items-center gap-2">
+        {#if pdfUrl}
+          <a
+            href={pdfPageUrl || pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-md transition-colors"
+            title="Open physical PDF in browser tab"
+          >
+            <ExternalLink class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">PDF</span>
+          </a>
+        {/if}
+
         <button
           type="button"
           onclick={handleCopyCitation}
@@ -279,19 +303,43 @@
 
       <!-- Center Document Reading Canvas -->
       <div
-        class="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-neutral-200/50 dark:bg-neutral-950/70"
+        class="flex-1 overflow-y-auto p-2 sm:p-6 flex justify-center bg-neutral-200/50 dark:bg-neutral-950/70"
       >
-        <!-- Rendered PDF Page Simulator -->
-        <div
-          class="w-full max-w-3xl bg-white dark:bg-neutral-900 shadow-md border border-neutral-300 dark:border-neutral-800 transition-transform duration-150 origin-top text-neutral-900 dark:text-neutral-100 {viewMode === 'pdf' ? 'p-8 sm:p-14 min-h-[900px] flex flex-col justify-between' : 'p-6 sm:p-10 rounded-lg'}"
-          style="transform: scale({zoomScale});"
-        >
-          <!-- Top PDF Running Header -->
-          <div>
-            {#if viewMode === 'pdf'}
+        {#if viewMode === 'pdf' && pdfUrl}
+          <!-- Native PDF Preview Embedded from /data -->
+          <div class="w-full h-full flex flex-col bg-white dark:bg-neutral-900 rounded-lg shadow-md border border-neutral-300 dark:border-neutral-800 overflow-hidden">
+            <div class="h-8 px-3 bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between text-[11px] text-neutral-600 dark:text-neutral-300 shrink-0 select-none">
+              <div class="flex items-center gap-2 truncate">
+                <span class="font-mono text-blue-600 dark:text-blue-400 font-semibold">/data/{doc.filename}</span>
+                <span>·</span>
+                <span class="text-neutral-400">Page {currentPageNum}</span>
+              </div>
+              <a
+                href={pdfPageUrl || pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                <span>Full Window</span>
+                <ExternalLink class="w-3 h-3" />
+              </a>
+            </div>
+            <iframe
+              src={pdfPageUrl}
+              title="PDF Preview: {doc.title}"
+              class="w-full flex-1 border-0 bg-neutral-100 dark:bg-neutral-900"
+            ></iframe>
+          </div>
+        {:else}
+          <!-- Rendered Extracted Page / Clean Flow with Chunk Highlights -->
+          <div
+            class="w-full max-w-3xl bg-white dark:bg-neutral-900 shadow-md border border-neutral-300 dark:border-neutral-800 transition-transform duration-150 origin-top text-neutral-900 dark:text-neutral-100 p-8 sm:p-14 min-h-[900px] flex flex-col justify-between"
+            style="transform: scale({zoomScale});"
+          >
+            <div>
               <div class="border-b-2 border-neutral-900 dark:border-neutral-100 pb-3 mb-8">
                 <div class="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-                  <span>CONFIDENTIAL // INTERNAL ARCHITECTURE SPECIFICATION</span>
+                  <span>ENTERPRISE KNOWLEDGE CORPUS // MILVUS VECTOR STORE</span>
                   <span class="tabular-nums">ID: {doc.id.toUpperCase()}</span>
                 </div>
                 <div class="flex items-center justify-between text-xs text-neutral-700 dark:text-neutral-300">
@@ -301,65 +349,58 @@
                   </span>
                 </div>
               </div>
-            {/if}
 
-            <!-- Page Title / Subhead -->
-            {#if currentPage?.header}
-              <div class="mb-6 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                <h3 class="text-base font-bold text-neutral-900 dark:text-neutral-100 font-sans">
-                  {currentPage.header}
-                </h3>
-              </div>
-            {/if}
-
-            <!-- Render Chunks / Paragraphs on this Page -->
-            <div class="space-y-6 font-serif">
-              {#each currentPage?.chunks || [] as chunk (chunk.id)}
-                {@const isHighlighted = Boolean(activeChunkId) && activeChunkId === chunk.id}
-
-                <div
-                  id={`chunk-${chunk.id}`}
-                  class="relative transition-all duration-300 rounded-md {isHighlighted
-                    ? 'border-l-4 border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 p-4 ring-1 ring-amber-300/80 dark:ring-amber-800/80 shadow-xs'
-                    : 'p-2'}"
-                >
-                  <!-- Highlight citation badge -->
-                  {#if isHighlighted}
-                    <div class="mb-2 flex items-center justify-between border-b border-amber-200/80 dark:border-amber-800/60 pb-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 font-sans">
-                      <span class="flex items-center gap-1.5">
-                        <Target class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        <span>Referenced Citation Span</span>
-                      </span>
-                      <span class="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
-                        Page {chunk.pageNumber} · Section {chunk.chunkIndex + 1}
-                      </span>
-                    </div>
-                  {/if}
-
-                  <!-- Section Heading -->
-                  {#if chunk.sectionHeading}
-                    <h4 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2 font-sans">
-                      {chunk.sectionHeading}
-                    </h4>
-                  {/if}
-
-                  <!-- Text -->
-                  <p class="text-sm leading-relaxed text-neutral-800 dark:text-neutral-200 whitespace-pre-line">
-                    {chunk.snippet}
-                  </p>
+              {#if currentPage?.header}
+                <div class="mb-6 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                  <h3 class="text-base font-bold text-neutral-900 dark:text-neutral-100 font-sans">
+                    {currentPage.header}
+                  </h3>
                 </div>
-              {/each}
-            </div>
-          </div>
+              {/if}
 
-          <!-- Bottom PDF Running Footer -->
-          {#if viewMode === 'pdf'}
+              <!-- Render Chunks / Paragraphs on this Page -->
+              <div class="space-y-6 font-serif">
+                {#each currentPage?.chunks || [] as chunk (chunk.id)}
+                  {@const isHighlighted = Boolean(activeChunkId) && activeChunkId === chunk.id}
+
+                  <div
+                    id={`chunk-${chunk.id}`}
+                    class="relative transition-all duration-300 rounded-md {isHighlighted
+                      ? 'border-l-4 border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 p-4 ring-1 ring-amber-300/80 dark:ring-amber-800/80 shadow-xs'
+                      : 'p-2'}"
+                  >
+                    {#if isHighlighted}
+                      <div class="mb-2 flex items-center justify-between border-b border-amber-200/80 dark:border-amber-800/60 pb-1.5 text-xs font-semibold text-amber-900 dark:text-amber-300 font-sans">
+                        <span class="flex items-center gap-1.5">
+                          <Target class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          <span>Referenced Citation Span</span>
+                        </span>
+                        <span class="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
+                          Page {chunk.pageNumber} · Section {chunk.chunkIndex + 1}
+                        </span>
+                      </div>
+                    {/if}
+
+                    {#if chunk.sectionHeading}
+                      <h4 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2 font-sans">
+                        {chunk.sectionHeading}
+                      </h4>
+                    {/if}
+
+                    <p class="text-sm leading-relaxed text-neutral-800 dark:text-neutral-200 whitespace-pre-line">
+                      {chunk.snippet}
+                    </p>
+                  </div>
+                {/each}
+              </div>
+            </div>
+
             <div class="mt-16 pt-4 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-[10px] font-mono text-neutral-400 dark:text-neutral-500 select-none">
               <span>ENTERPRISE SPECIFICATION · {doc.filename}</span>
               <span class="tabular-nums">PAGE {currentPageNum}</span>
             </div>
-          {/if}
-        </div>
+          </div>
+        {/if}
       </div>
 
       <!-- Right Info Drawer -->

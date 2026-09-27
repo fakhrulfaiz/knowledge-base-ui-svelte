@@ -118,12 +118,13 @@
   let isAuthorized = $derived(isOwnerOrAdmin || isTeamLead);
 
   let totalStoredBytes = $derived(getTotalSystemUsedBytes(documents));
-  let mineStoredBytes = $derived(getScopeUsedBytes('mine', documents, collections));
+  let projectStoredBytes = $derived(getScopeUsedBytes('project', documents, collections));
   let teamStoredBytes = $derived(getScopeUsedBytes('team', documents, collections));
   let orgStoredBytes = $derived(getScopeUsedBytes('org', documents, collections));
 
+  let projectPoolQuota = $derived(scopeForm.projectPoolQuotaGb ?? scopeForm.personalPoolQuotaGb ?? 50);
   let totalAssignedTiersGb = $derived(
-    scopeForm.personalPoolQuotaGb + scopeForm.teamPoolQuotaGb + scopeForm.orgPoolQuotaGb
+    projectPoolQuota + scopeForm.teamPoolQuotaGb + scopeForm.orgPoolQuotaGb
   );
   let unallocatedEnterpriseBufferGb = $derived(scopeForm.totalEnterpriseCapGb - totalAssignedTiersGb);
   let isScopeOverAllocated = $derived(unallocatedEnterpriseBufferGb < 0);
@@ -505,9 +506,9 @@
               </div>
               <div class="w-full h-3 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden flex border border-neutral-200 dark:border-neutral-700">
                 <div
-                  title="Personal: {scopeForm.personalPoolQuotaGb} GB"
-                  class="bg-sky-500 h-full transition-all duration-300"
-                  style="width: {(scopeForm.personalPoolQuotaGb / Math.max(1, scopeForm.totalEnterpriseCapGb)) * 100}%"
+                  title="Project Pool: {projectPoolQuota} GB"
+                  class="bg-purple-500 h-full transition-all duration-300"
+                  style="width: {(projectPoolQuota / Math.max(1, scopeForm.totalEnterpriseCapGb)) * 100}%"
                 ></div>
                 <div
                   title="Team Pool: {scopeForm.teamPoolQuotaGb} GB"
@@ -522,8 +523,8 @@
               </div>
               <div class="flex flex-wrap items-center gap-4 text-[11px] text-neutral-600 dark:text-neutral-400 pt-1">
                 <div class="flex items-center gap-1.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span>
-                  <span>Personal Pool ({scopeForm.personalPoolQuotaGb} GB)</span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span>
+                  <span>Project Pool ({projectPoolQuota} GB)</span>
                 </div>
                 <div class="flex items-center gap-1.5">
                   <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span>
@@ -537,7 +538,7 @@
             </div>
           </div>
 
-          <!-- Admin Tier Allocation Form (Personal, Team, Org) -->
+          <!-- Admin Tier Allocation Form (Project, Team, Org) -->
           <div class="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xs overflow-hidden">
             <div class="px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -553,52 +554,52 @@
 
             <div class="p-6 space-y-6">
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- 1. Personal Scope -->
+                <!-- 1. Project Scope -->
                 <div class="p-4 bg-neutral-50 dark:bg-neutral-800/60 rounded-xl border border-neutral-200 dark:border-neutral-700 space-y-4">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <div class="p-1.5 rounded-md bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300">
-                        <User class="w-4 h-4" />
+                      <div class="p-1.5 rounded-md bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300">
+                        <Layers class="w-4 h-4" />
                       </div>
                       <h3 class="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                        Personal Scope
+                        Project Scope Pool
                       </h3>
                     </div>
-                    <span class="text-[10px] font-mono bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded border border-sky-200 dark:border-sky-800 font-medium">
-                      Per User Cap
+                    <span class="text-[10px] font-mono bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 font-medium">
+                      Project Initiatives
                     </span>
                   </div>
 
                   <p class="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                    Scratchpads, individual RFC drafts, and personal sandbox experiments.
+                    Cross-functional initiative collections, project milestones, and deliverables. Personal files inside can be private or shared.
                   </p>
 
                   <div class="space-y-3 pt-2 border-t border-neutral-200/60 dark:border-neutral-700">
                     <div>
                       <div class="flex justify-between items-center text-xs mb-1">
-                        <span class="font-semibold text-neutral-700 dark:text-neutral-300">Per-User Limit:</span>
+                        <span class="font-semibold text-neutral-700 dark:text-neutral-300">Per-Project Cap:</span>
                         <span class="font-mono font-bold text-neutral-900 dark:text-neutral-100">
-                          {scopeForm.personalPerUserCapGb} GB
+                          {scopeForm.projectPerUserCapGb ?? scopeForm.personalPerUserCapGb ?? 10} GB
                         </span>
                       </div>
                       <input
                         type="range"
                         min="1"
-                        max="20"
+                        max="50"
                         step="1"
                         disabled={!isOwnerOrAdmin}
-                        bind:value={scopeForm.personalPerUserCapGb}
-                        class="w-full accent-blue-600 cursor-pointer disabled:opacity-50"
+                        bind:value={scopeForm.projectPerUserCapGb}
+                        class="w-full accent-purple-600 cursor-pointer disabled:opacity-50"
                       />
                       <div class="flex justify-between text-[10px] font-mono text-neutral-400 dark:text-neutral-500 mt-0.5">
                         <span>1 GB</span>
-                        <span>10 GB</span>
-                        <span>20 GB</span>
+                        <span>25 GB</span>
+                        <span>50 GB</span>
                       </div>
                     </div>
 
                     <div class="flex items-center justify-between text-xs pt-1">
-                      <span class="text-neutral-600 dark:text-neutral-400">Personal Pool Quota:</span>
+                      <span class="text-neutral-600 dark:text-neutral-400">Project Pool Quota:</span>
                       <div class="flex items-center gap-1">
                         <input
                           type="number"
@@ -606,7 +607,7 @@
                           max="500"
                           step="5"
                           disabled={!isOwnerOrAdmin}
-                          bind:value={scopeForm.personalPoolQuotaGb}
+                          bind:value={scopeForm.projectPoolQuotaGb}
                           class="w-16 px-2 py-0.5 text-right font-mono text-xs border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 disabled:bg-neutral-100 dark:disabled:bg-neutral-800/40"
                         />
                         <span class="font-mono text-neutral-500 dark:text-neutral-400">GB</span>
@@ -616,7 +617,7 @@
                     <div class="p-2.5 bg-white dark:bg-neutral-900 rounded border border-neutral-200 dark:border-neutral-700 text-[11px] flex justify-between items-center">
                       <span class="text-neutral-500 dark:text-neutral-400">Current Storage Used:</span>
                       <span class="font-mono font-bold text-neutral-800 dark:text-neutral-200">
-                        {formatBytes(mineStoredBytes)}
+                        {formatBytes(projectStoredBytes)}
                       </span>
                     </div>
                   </div>

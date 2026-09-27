@@ -256,6 +256,23 @@ export const INITIAL_COLLECTIONS: Collection[] = [
     tags: ['Search', 'Retrieval', 'Embeddings', 'Vector Indexing'],
     colorTheme: 'violet',
   },
+  {
+    id: 'col-networking-100g',
+    name: '100G High-Speed Optical Networking & Protocols',
+    description: 'Technical slide deck and architecture for 100G Ethernet, QSFP28 optical modules, PAM4 modulation, and Milvus vector embeddings.',
+    scope: 'org',
+    allocatedGb: 35,
+    createdBy: {
+      name: 'Christopher Lameter & Fernando Garcia',
+      email: 'cl@linux.com',
+    },
+    createdAt: '2026-08-23T10:00:00Z',
+    updatedAt: '2026-09-25T14:46:00Z',
+    documentCount: 1,
+    totalChunks: 32,
+    tags: ['Milvus Live', '100G Optical', 'QSFP28', 'Hardware'],
+    colorTheme: 'blue',
+  },
 ];
 
 // Raw documents to initialize
@@ -582,7 +599,8 @@ Unprocessable messages are directed to isolated Dead Letter Queues with exponent
 ];
 
 // Process raw docs through the chunker utility to produce realistic DocumentItem objects
-export const INITIAL_DOCUMENTS: DocumentItem[] = rawDocsData.map((raw) => {
+export const INITIAL_DOCUMENTS: DocumentItem[] = [
+  ...rawDocsData.map((raw) => {
   const pages = chunkTextIntoPages(raw.id, raw.collectionId, raw.scope, raw.rawPages);
   const totalChunks = pages.reduce((acc, p) => acc + p.chunks.length, 0);
 
@@ -604,8 +622,30 @@ export const INITIAL_DOCUMENTS: DocumentItem[] = rawDocsData.map((raw) => {
     crossReferences: raw.crossReferences,
     semanticTopics: raw.semanticTopics,
     pages,
+    status: 'indexed' as const,
   };
-});
+}),
+  {
+    id: 'doc-failed-01',
+    collectionId: 'col-org-1',
+    title: 'SEC-LEGACY-ScannedAudit-2024.pdf',
+    filename: 'SEC-LEGACY-ScannedAudit-2024.pdf',
+    fileType: 'pdf' as const,
+    source: 'upload' as const,
+    uploadedAt: '2026-09-24T08:15:00Z',
+    uploadedBy: 'Security Architecture Council',
+    sizeBytes: 3100000,
+    pageCount: 4,
+    chunkCount: 0,
+    summary: 'Scanned audit archive for legacy data center infrastructure. Extraction failed due to low contrast OCR resolution on page 3.',
+    entities: ['Legacy Audit', 'Data Center', 'Hardware'],
+    crossReferences: [],
+    semanticTopics: ['Audit', 'Legacy Hardware'],
+    pages: [],
+    status: 'failed' as const,
+    errorMessage: 'OCR Engine Failure: Image DPI < 150. Unable to parse text stream and generate vector embeddings for page 3-4.',
+  }
+];
 
 // Corporate Drive repository structure for the "Upload from Drive" file picker modal
 export const DRIVE_FOLDERS: DriveFolder[] = [

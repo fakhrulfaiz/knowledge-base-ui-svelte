@@ -4,12 +4,11 @@
     Search,
     Plus,
     ArrowUpDown,
+    SlidersHorizontal,
+    Sliders,
     Building2,
     Users,
-    User,
-    HardDrive,
-    SlidersHorizontal,
-    Sliders
+    Briefcase
   } from '@lucide/svelte';
   import type { Collection, ScopeType, TeamAllocationRecord, UserProfile } from '../types';
   import CollectionCard from './CollectionCard.svelte';
@@ -25,6 +24,7 @@
     currentUser?: UserProfile;
     teamAllocations?: TeamAllocationRecord[];
     onOpenTeamAllocationModal?: (teamRecord: TeamAllocationRecord) => void;
+    onDeleteCollection?: (col: Collection) => void;
   }
 
   let {
@@ -37,6 +37,7 @@
     currentUser,
     teamAllocations,
     onOpenTeamAllocationModal,
+    onDeleteCollection,
   }: Props = $props();
 
   let canAdmin = $derived(canAccessAdmin(currentUser));
@@ -53,18 +54,19 @@
 
   let filteredCollections = $derived.by(() => {
     let result = collections.filter((col) => {
-      // 1. Scope filter
-      if (selectedScope === 'mine' && col.scope !== 'mine') return false;
-      if (selectedScope === 'org' && col.scope === 'mine') return false;
+      // Scope filter
+      if (selectedScope === 'org' && col.scope !== 'org') return false;
       if (selectedScope === 'team' && col.scope !== 'team') return false;
+      if (selectedScope === 'project' && col.scope !== 'project') return false;
 
-      // 2. Search query filter
+      // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = col.name.toLowerCase().includes(q);
         const matchDesc = col.description.toLowerCase().includes(q);
         const matchTeam = col.teamName?.toLowerCase().includes(q);
-        if (!matchName && !matchDesc && !matchTeam) return false;
+        const matchProj = col.projectName?.toLowerCase().includes(q);
+        if (!matchName && !matchDesc && !matchTeam && !matchProj) return false;
       }
 
       return true;
@@ -80,10 +82,6 @@
       return a.name.localeCompare(b.name);
     });
   });
-
-  let orgCollections = $derived(filteredCollections.filter((c) => c.scope === 'org'));
-  let teamCollections = $derived(filteredCollections.filter((c) => c.scope === 'team'));
-  let mineCollections = $derived(filteredCollections.filter((c) => c.scope === 'mine'));
 </script>
 
 <div class="flex-1 flex flex-col h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors">
@@ -109,57 +107,82 @@
           <span>Admin &amp; Ingestion</span>
         </button>
       {/if}
+
       {#if canCreate}
         <button
           type="button"
           onclick={onOpenNewCollection}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-xs transition-colors cursor-pointer"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Create Collection</span>
+          <span>New Collection</span>
         </button>
       {/if}
     </div>
   </div>
 
-  <!-- Scope Navigation Bar & Filters -->
-  <div class="px-6 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 space-y-3 shrink-0">
-    <!-- Scope Tabs -->
+  <!-- Filter Bar: All, Org, Team, Project -->
+  <div class="px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0">
     <div class="flex items-center justify-between flex-wrap gap-3">
-      <!-- Segmented Control for Scope -->
-      <div class="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg border border-neutral-200/80 dark:border-neutral-700">
-        <button
-          type="button"
-          onclick={() => onSelectScope('mine')}
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'mine'
-            ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-            : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
-        >
-          <User class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>Personal</span>
-        </button>
+      <!-- Quick Filter Pills -->
+      <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg border border-neutral-200/80 dark:border-neutral-700">
+          <button
+            type="button"
+            onclick={() => onSelectScope('all')}
+            class="px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'all'
+              ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onclick={() => onSelectScope('org')}
+            class="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'org'
+              ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          >
+            <Building2 class="w-3 h-3" />
+            <span>Organization</span>
+          </button>
+          <button
+            type="button"
+            onclick={() => onSelectScope('team')}
+            class="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'team'
+              ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          >
+            <Users class="w-3 h-3" />
+            <span>Team</span>
+          </button>
+          <button
+            type="button"
+            onclick={() => onSelectScope('project')}
+            class="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'project'
+              ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs font-semibold'
+              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
+          >
+            <Briefcase class="w-3 h-3" />
+            <span>Project</span>
+          </button>
+        </div>
 
-        <button
-          type="button"
-          onclick={() => onSelectScope('org')}
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'org' || selectedScope === 'team'
-            ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-            : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
-        >
-          <Building2 class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>Shared</span>
-        </button>
-
-        <button
-          type="button"
-          onclick={() => onSelectScope('all')}
-          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer {selectedScope === 'all'
-            ? 'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-xs'
-            : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'}"
-        >
-          <HardDrive class="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400" />
-          <span>All</span>
-        </button>
+        {#if teamAllocations && onOpenTeamAllocationModal && canManageQuotas}
+          {@const targetTeam = teamAllocations.find(
+            (t) => t.teamName.toLowerCase() === (currentUser?.teamName || '').toLowerCase()
+          ) || teamAllocations[0]}
+          {#if targetTeam}
+            <button
+              type="button"
+              onclick={() => onOpenTeamAllocationModal(targetTeam)}
+              class="flex items-center gap-1.5 px-2.5 py-1 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors cursor-pointer"
+            >
+              <Sliders class="w-3.5 h-3.5" />
+              <span>Quotas</span>
+            </button>
+          {/if}
+        {/if}
       </div>
 
       <!-- Search & Sort -->
@@ -168,185 +191,53 @@
           <Search class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Filter collections..."
+            placeholder="Search collections..."
             bind:value={searchQuery}
             class="pl-8 pr-3 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-600 w-48"
           />
         </div>
 
-        <div class="flex items-center gap-1 text-xs text-neutral-600 dark:text-neutral-400">
-          <ArrowUpDown class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />
+        <div class="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+          <ArrowUpDown class="w-3.5 h-3.5" />
           <select
             bind:value={sortBy}
-            class="bg-transparent text-xs text-neutral-700 dark:text-neutral-300 py-1 pr-2 border-0 focus:ring-0 cursor-pointer font-medium"
+            class="bg-transparent border-0 text-xs text-neutral-700 dark:text-neutral-300 font-medium focus:outline-hidden cursor-pointer"
           >
-            <option value="updated" class="dark:bg-neutral-800">Recently Updated</option>
-            <option value="name" class="dark:bg-neutral-800">Alphabetical</option>
-            <option value="docs" class="dark:bg-neutral-800">Document Count</option>
+            <option value="updated">Recent</option>
+            <option value="name">Name</option>
+            <option value="docs">Doc count</option>
           </select>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Main Collections Content Body -->
-  <div class="flex-1 overflow-y-auto p-6">
+  <!-- Content Grid -->
+  <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
     {#if filteredCollections.length === 0}
-      <div class="h-64 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg flex flex-col items-center justify-center text-center p-6 bg-white dark:bg-neutral-900">
-        <FolderKanban class="w-10 h-10 text-neutral-400 dark:text-neutral-500 mb-2" />
-        <h3 class="text-sm font-semibold text-neutral-800 dark:text-neutral-200">No collections found</h3>
-        <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mt-1 mb-4">
-          {searchQuery
-            ? `No collections matched "${searchQuery}". Try adjusting your search query or scope.`
-            : 'No collections in this scope yet. Create a collection to organize ingested documents.'}
-        </p>
+      <div class="h-64 flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-500">
+        <FolderKanban class="w-10 h-10 stroke-[1.5] mb-2 opacity-60" />
+        <p class="text-xs">No collections found in this scope</p>
         {#if canCreate}
           <button
             type="button"
             onclick={onOpenNewCollection}
-            class="px-3.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer shadow-xs"
+            class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
           >
-            Create New Collection
+            Create your first collection
           </button>
         {/if}
       </div>
     {:else}
-      <div class="space-y-6">
-        <!-- If All scope or Shared, display with clear section hierarchy -->
-        {#if selectedScope === 'all' || selectedScope === 'org'}
-          <!-- Organization Collections Group -->
-          {#if orgCollections.length > 0}
-            <div class="space-y-3">
-              <div class="flex items-center gap-2 pb-1 border-b border-neutral-200 dark:border-neutral-800">
-                <Building2 class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-                <h2 class="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                  Organization Collections
-                </h2>
-                <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-                  ({orgCollections.length})
-                </span>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {#each orgCollections as col (col.id)}
-                  <CollectionCard
-                    collection={col}
-                    onselect={() => onSelectCollection(col.id)}
-                  />
-                {/each}
-              </div>
-            </div>
-          {/if}
-
-          <!-- Team Collections Group -->
-          {#if teamCollections.length > 0}
-            <div class="space-y-3">
-              <div class="flex items-center justify-between pb-1 border-b border-neutral-200 dark:border-neutral-800">
-                <div class="flex items-center gap-2">
-                  <Users class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <h2 class="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                    Team Collections
-                  </h2>
-                  <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-                    ({teamCollections.length})
-                  </span>
-                </div>
-
-                {#if teamAllocations && onOpenTeamAllocationModal}
-                  {@const targetTeam = teamAllocations.find(
-                    (t) => t.teamName.toLowerCase() === (currentUser?.teamName || '').toLowerCase()
-                  ) || teamAllocations[0]}
-                  <button
-                    type="button"
-                    onclick={() => {
-                      if (targetTeam) onOpenTeamAllocationModal(targetTeam);
-                    }}
-                    class="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium cursor-pointer"
-                  >
-                    <Sliders class="w-3.5 h-3.5" />
-                    <span>Manage Team Quotas</span>
-                  </button>
-                {/if}
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {#each teamCollections as col (col.id)}
-                  <CollectionCard
-                    collection={col}
-                    onselect={() => onSelectCollection(col.id)}
-                  />
-                {/each}
-              </div>
-            </div>
-          {/if}
-
-          <!-- Mine Group (if in All view) -->
-          {#if selectedScope === 'all' && mineCollections.length > 0}
-            <div class="space-y-3">
-              <div class="flex items-center gap-2 pb-1 border-b border-neutral-200 dark:border-neutral-800">
-                <User class="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-                <h2 class="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                  Personal Collections
-                </h2>
-                <span class="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono tabular-nums">
-                  ({mineCollections.length})
-                </span>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {#each mineCollections as col (col.id)}
-                  <CollectionCard
-                    collection={col}
-                    onselect={() => onSelectCollection(col.id)}
-                  />
-                {/each}
-              </div>
-            </div>
-          {/if}
-        {:else if selectedScope === 'team'}
-          <div class="space-y-4">
-            <div class="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
-              <div class="flex items-center gap-2">
-                <Users class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <h2 class="text-xs font-semibold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">
-                  Team Collections ({filteredCollections.length})
-                </h2>
-              </div>
-
-              {#if teamAllocations && onOpenTeamAllocationModal && canManageQuotas}
-                {@const targetTeam = teamAllocations.find(
-                  (t) => t.teamName.toLowerCase() === (currentUser?.teamName || '').toLowerCase()
-                ) || teamAllocations[0]}
-                <button
-                  type="button"
-                  onclick={() => {
-                    if (targetTeam) onOpenTeamAllocationModal(targetTeam);
-                  }}
-                  class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
-                >
-                  <Sliders class="w-3.5 h-3.5" />
-                  <span>Manage Team Quotas</span>
-                </button>
-              {/if}
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {#each filteredCollections as col (col.id)}
-                <CollectionCard
-                  collection={col}
-                  onselect={() => onSelectCollection(col.id)}
-                />
-              {/each}
-            </div>
-          </div>
-        {:else}
-          <!-- Flat grid for Mine or Org-only views -->
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {#each filteredCollections as col (col.id)}
-              <CollectionCard
-                collection={col}
-                onselect={() => onSelectCollection(col.id)}
-              />
-            {/each}
-          </div>
-        {/if}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {#each filteredCollections as col (col.id)}
+          <CollectionCard
+            collection={col}
+            {currentUser}
+            onselect={() => onSelectCollection(col.id)}
+            onDelete={onDeleteCollection}
+          />
+        {/each}
       </div>
     {/if}
   </div>

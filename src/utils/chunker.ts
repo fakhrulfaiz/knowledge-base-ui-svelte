@@ -25,7 +25,7 @@ export function estimateTokens(text: string): number {
 export function chunkTextIntoPages(
   docId: string,
   collectionId: string,
-  scope: 'mine' | 'team' | 'org',
+  scope: 'mine' | 'team' | 'org' | 'project',
   rawPages: { pageNumber: number; header?: string; content: string }[],
   config: IngestionConfig = DEFAULT_INGESTION_CONFIG
 ): DocumentPage[] {

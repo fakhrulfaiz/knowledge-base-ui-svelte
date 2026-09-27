@@ -4,10 +4,9 @@
     FolderPlus,
     Building2,
     Users,
-    User,
+    Briefcase,
     ArrowRight,
-    Lock,
-    ShieldAlert
+    Lock
   } from '@lucide/svelte';
   import type { Collection, UserProfile } from '../types';
   import {
@@ -26,34 +25,67 @@
 
   let allowedScopes = $derived(getAllowedCollectionScopes(currentUser));
   let canCreate = $derived(canCreateCollection(currentUser));
-  let canScopeMine = $derived(allowedScopes.includes('mine'));
+  let canScopeProject = $derived(allowedScopes.includes('project'));
   let canScopeTeam = $derived(allowedScopes.includes('team'));
   let canScopeOrg = $derived(allowedScopes.includes('org'));
 
   let name = $state('');
   let description = $state('');
-  let scope = $state<'mine' | 'team' | 'org'>('mine');
-  // svelte-ignore state_referenced_locally
-  let teamName = $state(currentUser.teamName || 'Platform Infrastructure');
+  let scope = $state<'org' | 'team' | 'project' | 'mine'>('project');
+  let teamName = $state('');
+  let projectName = $state('Core Modernization');
 
   $effect(() => {
-    // Ensure default selected scope is allowed
+    if (!teamName) {
+      teamName = currentUser?.teamName || 'Platform Infrastructure';
+    }
     if (allowedScopes.length > 0 && !allowedScopes.includes(scope)) {
       scope = allowedScopes[0];
     }
   });
 
-  function handleSubmit(e: SubmitEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     if (!canCreate || !canCreateCollectionInScope(currentUser, scope)) return;
 
-    const newCol: Collection = {
-      id: `col-${Date.now()}`,
-      name: name.trim(),
+    const colId = `col-${Date.now()}`;
+    const cleanName = name.trim();
+
+    const payload = {
+      id: colId,
+      name: cleanName,
       description: description.trim() || 'No description provided.',
       scope,
-      teamName: scope === 'team' ? teamName : undefined,
+      teamName: scope === 'team' ? teamName.trim() : undefined,
+      projectName: scope === 'project' ? projectName.trim() : undefined,
+      allocatedGb: scope === 'org' ? 50 : scope === 'team' ? 30 : 15
+    };
+
+    try {
+      const res = await fetch('http://localhost:8080/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const created = await res.json();
+        onCreate(created);
+        onClose();
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend call failed, creating locally:', err);
+    }
+
+    const newCol: Collection = {
+      id: colId,
+      name: cleanName,
+      description: description.trim() || 'No description provided.',
+      scope,
+      teamName: scope === 'team' ? teamName.trim() : undefined,
+      projectName: scope === 'project' ? projectName.trim() : undefined,
+      allocatedGb: scope === 'org' ? 50 : scope === 'team' ? 30 : 15,
       createdBy: {
         name: currentUser.name,
         email: currentUser.email,
@@ -62,7 +94,7 @@
       updatedAt: new Date().toISOString(),
       documentCount: 0,
       totalChunks: 0,
-      tags: [],
+      tags: [scope.toUpperCase(), scope === 'team' ? teamName : scope === 'project' ? projectName : 'Global'],
     };
 
     onCreate(newCol);
@@ -75,7 +107,7 @@
     <!-- Header -->
     <div class="h-14 px-6 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
-        <div class="p-1.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
+        <div class="p-1.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
           <FolderPlus class="w-4 h-4" />
         </div>
         <h2 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Create New Collection</h2>
@@ -98,6 +130,7 @@
           <span>Your account role ({currentUser.systemRole.toUpperCase()}) is read-only. Creating collections requires contributor or administrator privileges.</span>
         </div>
       {/if}
+
       <!-- Collection Name -->
       <div>
         <label for="col-name" class="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
@@ -109,7 +142,7 @@
           required
           placeholder="e.g. Distributed Database Architecture 2026"
           bind:value={name}
-          class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500 focus:bg-white dark:focus:bg-neutral-800/90"
+          class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-blue-500 focus:bg-white dark:focus:bg-neutral-800/90"
         />
       </div>
 
@@ -120,68 +153,20 @@
         </label>
         <textarea
           id="col-desc"
-          rows={3}
-          placeholder="Describe the scope, systems covered, and intended audience..."
+          rows={2}
+          placeholder="Describe the collection domain, systems covered, and intended audience..."
           bind:value={description}
-          class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500 focus:bg-white dark:focus:bg-neutral-800/90 resize-none"
+          class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-blue-500 focus:bg-white dark:focus:bg-neutral-800/90 resize-none"
         ></textarea>
       </div>
 
-      <!-- Scope Selection -->
+      <!-- Scope Selection: Org, Team, Project -->
       <div>
         <span class="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1.5">
-          Access Scope
+          Governance Scope
         </span>
         <div class="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            disabled={!canScopeMine}
-            onclick={() => (scope = 'mine')}
-            class="p-2.5 rounded-lg border text-left transition-all {!canScopeMine
-              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
-              : scope === 'mine'
-              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
-              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
-          >
-            <div class="flex items-center justify-between font-medium mb-0.5">
-              <div class="flex items-center gap-1.5">
-                <User class="w-3.5 h-3.5" />
-                <span>Personal</span>
-              </div>
-              {#if !canScopeMine}
-                <Lock class="w-3 h-3 text-neutral-400" />
-              {/if}
-            </div>
-            <div class="text-[10px] {scope === 'mine' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
-              Private personal collection
-            </div>
-          </button>
-
-          <button
-            type="button"
-            disabled={!canScopeTeam}
-            onclick={() => (scope = 'team')}
-            class="p-2.5 rounded-lg border text-left transition-all {!canScopeTeam
-              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
-              : scope === 'team'
-              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
-              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
-            title={!canScopeTeam ? 'Requires Team Lead or Admin role' : ''}
-          >
-            <div class="flex items-center justify-between font-medium mb-0.5">
-              <div class="flex items-center gap-1.5">
-                <Users class="w-3.5 h-3.5" />
-                <span>Team</span>
-              </div>
-              {#if !canScopeTeam}
-                <Lock class="w-3 h-3 text-neutral-400" />
-              {/if}
-            </div>
-            <div class="text-[10px] {scope === 'team' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
-              {canScopeTeam ? 'Shared with team members' : 'Requires Team Lead'}
-            </div>
-          </button>
-
+          <!-- Org -->
           <button
             type="button"
             disabled={!canScopeOrg}
@@ -191,7 +176,6 @@
               : scope === 'org'
               ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
               : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
-            title={!canScopeOrg ? 'Requires Admin or Owner role' : ''}
           >
             <div class="flex items-center justify-between font-medium mb-0.5">
               <div class="flex items-center gap-1.5">
@@ -203,45 +187,104 @@
               {/if}
             </div>
             <div class="text-[10px] {scope === 'org' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
-              {canScopeOrg ? 'Enterprise-wide shared' : 'Requires Admin/Owner'}
+              Enterprise-wide corpus
+            </div>
+          </button>
+
+          <!-- Team -->
+          <button
+            type="button"
+            disabled={!canScopeTeam}
+            onclick={() => (scope = 'team')}
+            class="p-2.5 rounded-lg border text-left transition-all {!canScopeTeam
+              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
+              : scope === 'team'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
+              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
+          >
+            <div class="flex items-center justify-between font-medium mb-0.5">
+              <div class="flex items-center gap-1.5">
+                <Users class="w-3.5 h-3.5" />
+                <span>Team</span>
+              </div>
+              {#if !canScopeTeam}
+                <Lock class="w-3 h-3 text-neutral-400" />
+              {/if}
+            </div>
+            <div class="text-[10px] {scope === 'team' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
+              Shared team repository
+            </div>
+          </button>
+
+          <!-- Project -->
+          <button
+            type="button"
+            disabled={!canScopeProject}
+            onclick={() => (scope = 'project')}
+            class="p-2.5 rounded-lg border text-left transition-all {!canScopeProject
+              ? 'opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700'
+              : scope === 'project'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-xs cursor-pointer'
+              : 'bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 cursor-pointer'}"
+          >
+            <div class="flex items-center justify-between font-medium mb-0.5">
+              <div class="flex items-center gap-1.5">
+                <Briefcase class="w-3.5 h-3.5" />
+                <span>Project</span>
+              </div>
+              {#if !canScopeProject}
+                <Lock class="w-3 h-3 text-neutral-400" />
+              {/if}
+            </div>
+            <div class="text-[10px] {scope === 'project' ? 'text-blue-100' : 'text-neutral-400 dark:text-neutral-500'}">
+              Dedicated project workspace
             </div>
           </button>
         </div>
       </div>
 
-      <!-- If Team Scope, choose team name -->
+      <!-- Scope Specific Inputs -->
       {#if scope === 'team'}
         <div>
           <label for="col-team" class="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
-            Team Identifier
+            Team Name
           </label>
-          <select
+          <input
             id="col-team"
+            type="text"
+            required
             bind:value={teamName}
-            class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:border-neutral-400 dark:focus:border-neutral-500"
-          >
-            <option value="Platform Infrastructure" class="dark:bg-neutral-800">Platform Infrastructure</option>
-            <option value="Core AI Infrastructure" class="dark:bg-neutral-800">Core AI Infrastructure</option>
-            <option value="Data Engineering" class="dark:bg-neutral-800">Data Engineering</option>
-            <option value="SecOps & Compliance" class="dark:bg-neutral-800">SecOps &amp; Compliance</option>
-            <option value="Frontend Architecture" class="dark:bg-neutral-800">Frontend Architecture</option>
-          </select>
+            class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:border-blue-500"
+          />
+        </div>
+      {:else if scope === 'project'}
+        <div>
+          <label for="col-proj" class="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
+            Project Name
+          </label>
+          <input
+            id="col-proj"
+            type="text"
+            required
+            bind:value={projectName}
+            class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md text-xs text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:border-blue-500"
+          />
         </div>
       {/if}
 
-      <!-- Footer Submit -->
-      <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-2">
+      <!-- Footer Buttons -->
+      <div class="pt-2 flex items-center justify-end gap-2 border-t border-neutral-100 dark:border-neutral-800">
         <button
           type="button"
           onclick={onClose}
-          class="px-3 py-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 font-medium cursor-pointer"
+          class="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-neutral-700 dark:text-neutral-300 font-medium transition-colors cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="submit"
-          disabled={!name.trim() || !canCreate || !canCreateCollectionInScope(currentUser, scope)}
-          class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-md shadow-xs transition-colors cursor-pointer"
+          disabled={!canCreate || !name.trim()}
+          class="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-md shadow-xs transition-colors cursor-pointer"
         >
           <span>Create Collection</span>
           <ArrowRight class="w-3.5 h-3.5" />

@@ -22,7 +22,8 @@
   import {
     canUploadToCollection,
     canDeleteDocument,
-    canManageCollectionQuota
+    canManageCollectionQuota,
+    canDeleteCollection
   } from '../utils/governance';
 
   interface Props {
@@ -32,10 +33,12 @@
     teamAllocations?: TeamAllocationRecord[];
     onOpenTeamAllocationModal?: (teamRecord: TeamAllocationRecord) => void;
     onBack: () => void;
+    onOpenGraph?: () => void;
     onOpenUploadModal: () => void;
     onOpenDriveModal: () => void;
     onOpenDocument: (doc: DocumentItem, pageNumber?: number, chunkId?: string) => void;
     onDeleteDocument: (docId: string) => void;
+    onDeleteCollection?: (col: Collection) => void;
   }
 
   let {
@@ -45,10 +48,12 @@
     teamAllocations,
     onOpenTeamAllocationModal,
     onBack,
+    onOpenGraph,
     onOpenUploadModal,
     onOpenDriveModal,
     onOpenDocument,
     onDeleteDocument,
+    onDeleteCollection,
   }: Props = $props();
 
   let activeTab = $state<'documents' | 'graph'>('documents');
@@ -71,6 +76,7 @@
 
   let canUpload = $derived(canUploadToCollection(currentUser, collection));
   let canManageQuota = $derived(canManageCollectionQuota(currentUser, collection));
+  let canDelete = $derived(canDeleteCollection(currentUser, collection));
 
   let filteredDocs = $derived.by(() => {
     if (!docSearchQuery.trim()) return collectionDocs;
@@ -86,8 +92,8 @@
   let graph = $derived(computeDocumentGraph(collectionDocs, 'combined', 0.15));
 
   let scopeLabel = $derived(
-    collection.scope === 'mine'
-      ? 'My Collections'
+    collection.scope === 'project'
+      ? `Project (${collection.projectName || 'Active'})`
       : collection.scope === 'org'
       ? 'Organization'
       : `Team (${collection.teamName || 'Engineering'})`
@@ -125,6 +131,19 @@
 
     <!-- Action Buttons -->
     <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      {#if onOpenGraph}
+        <button
+          type="button"
+          onclick={onOpenGraph}
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
+          title="Open in Vector Knowledge Graph"
+        >
+          <Network class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <span class="hidden sm:inline">Explore in Graph</span>
+          <span class="sm:hidden">Graph</span>
+        </button>
+      {/if}
+
       {#if canUpload}
         <button
           type="button"
@@ -150,6 +169,19 @@
           <Lock class="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
           <span>Read-Only Viewer</span>
         </div>
+      {/if}
+
+      {#if canDelete && collection.id !== 'all_knowledge_base'}
+        <button
+          type="button"
+          onclick={() => onDeleteCollection?.(collection)}
+          class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium rounded-md shadow-2xs transition-colors cursor-pointer"
+          title="Delete this collection"
+        >
+          <Trash2 class="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+          <span class="hidden sm:inline">Delete Collection</span>
+          <span class="sm:hidden">Delete</span>
+        </button>
       {/if}
     </div>
   </div>
@@ -334,11 +366,26 @@
                           {doc.fileType}
                         </span>
                         <div class="min-w-0 flex-1">
-                          <div
-                            class="font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate text-xs sm:text-sm"
-                            title={doc.title}
-                          >
-                            {doc.title}
+                          <div class="flex items-center gap-2">
+                            <span
+                              class="font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate text-xs sm:text-sm"
+                              title={doc.title}
+                            >
+                              {doc.title}
+                            </span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 border border-neutral-200 dark:border-neutral-700">
+                              {doc.id}
+                            </span>
+                            {#if doc.visibility === 'private'}
+                              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-0.5">
+                                <Lock class="w-2.5 h-2.5" />
+                                <span>Private</span>
+                              </span>
+                            {:else}
+                              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                Shared
+                              </span>
+                            {/if}
                           </div>
                           <div
                             class="text-[11px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5"
@@ -415,10 +462,25 @@
           <!-- Google Drive Style Grid View (Compact, Uncluttered, Minimalist) -->
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {#each filteredDocs as doc (doc.id)}
-              <DocumentGridCardPreview
-                {doc}
-                onclick={() => onOpenDocument(doc, 1)}
-              />
+              <div class="relative group">
+                <DocumentGridCardPreview
+                  {doc}
+                  onclick={() => onOpenDocument(doc, 1)}
+                />
+                {#if canDeleteDocument(currentUser, doc, collection)}
+                  <button
+                    type="button"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      onDeleteDocument(doc.id);
+                    }}
+                    class="absolute top-2 right-2 p-1.5 rounded-md bg-white/95 dark:bg-neutral-900/95 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 border border-neutral-200 dark:border-neutral-700 shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                    title="Remove from collection"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                {/if}
+              </div>
             {/each}
           </div>
         {/if}

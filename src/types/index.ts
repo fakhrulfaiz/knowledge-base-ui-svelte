@@ -1,4 +1,4 @@
-export type ScopeType = 'mine' | 'team' | 'org' | 'all';
+export type ScopeType = 'org' | 'team' | 'project' | 'mine' | 'all';
 
 export type SystemRole = 'owner' | 'admin' | 'team_lead' | 'member' | 'viewer';
 
@@ -18,8 +18,9 @@ export interface Collection {
   id: string;
   name: string;
   description: string;
-  scope: 'mine' | 'team' | 'org';
+  scope: 'org' | 'team' | 'project' | 'mine';
   teamName?: string;
+  projectName?: string;
   allocatedGb?: number; // collection quota in GB set by team lead or admin
   createdBy: {
     name: string;
@@ -31,6 +32,7 @@ export interface Collection {
   totalChunks: number;
   tags: string[];
   colorTheme?: string;
+  color?: string;
 }
 
 export interface DocumentChunk {
@@ -45,7 +47,7 @@ export interface DocumentChunk {
   endOffset: number;
   sectionHeading: string;
   entities: string[];
-  scope: 'mine' | 'team' | 'org';
+  scope: 'org' | 'team' | 'project' | 'mine';
   keywords: string[];
 }
 
@@ -59,21 +61,28 @@ export interface DocumentPage {
 export interface DocumentItem {
   id: string;
   collectionId: string;
+  collections?: string[]; // Multi-collection tagging (1 vector in RAM shared across multiple collections)
   title: string;
   filename: string;
+  pdfUrl?: string; // Direct streaming URL from /data
   fileType: 'pdf' | 'docx' | 'md' | 'report';
   source: 'upload' | 'drive';
+  visibility?: 'private' | 'shared'; // Personal/private vs shared within collection
   drivePath?: string;
   uploadedAt: string;
   uploadedBy: string;
   sizeBytes: number;
   pageCount: number;
   chunkCount: number;
+  totalChunks?: number;
+  totalTokens?: number;
   summary: string;
   entities: string[];
   crossReferences: string[]; // docIds or titles referenced
   semanticTopics: string[];
   pages: DocumentPage[];
+  status?: 'indexed' | 'processing' | 'failed' | 'extracted';
+  errorMessage?: string;
 }
 
 export interface DriveFolder {
@@ -81,13 +90,13 @@ export interface DriveFolder {
   name: string;
   path: string;
   parentId: string | null;
-  scope?: 'mine' | 'team' | 'org';
+  scope?: 'org' | 'team' | 'project' | 'mine';
   teamName?: string;
 }
 
 export interface DriveFile {
   id: string;
-  folderId: string;
+  folderId?: string;
   title: string;
   filename: string;
   fileType: 'pdf' | 'docx' | 'md';
@@ -95,11 +104,14 @@ export interface DriveFile {
   lastModified: string;
   author: string;
   previewSummary: string;
-  scope?: 'mine' | 'team' | 'org';
+  scope?: 'org' | 'team' | 'project' | 'mine';
   teamName?: string;
   extractorStatus?: 'extracted' | 'not_extracted' | 'extracting';
+  ingestStatus?: 'ingested' | 'not_ingested' | 'ingesting';
   extractedAt?: string;
-  rawContent: {
+  pageCount?: number;
+  linkedCollections?: string[];
+  rawContent?: {
     title: string;
     summary: string;
     entities: string[];
@@ -145,7 +157,7 @@ export interface SearchResultChunk {
 
 export interface SearchQueryOptions {
   query: string;
-  scope: 'all' | 'mine' | 'team' | 'org';
+  scope: 'all' | 'org' | 'team' | 'project' | 'mine';
   teamName?: string;
   collectionId?: string;
   topK: number; // Retrieval depth (chunk count)
@@ -181,8 +193,10 @@ export interface ReindexJob {
 
 export interface ScopeResourceAllocation {
   totalEnterpriseCapGb: number;
-  personalPerUserCapGb: number;
-  personalPoolQuotaGb: number;
+  personalPerUserCapGb?: number;
+  personalPoolQuotaGb?: number;
+  projectPerUserCapGb?: number;
+  projectPoolQuotaGb?: number;
   teamPoolQuotaGb: number;
   orgPoolQuotaGb: number;
 }
@@ -200,4 +214,54 @@ export interface TeamAllocationRecord {
     collectionName: string;
     allocatedGb: number; // Allocated by Team Leader
   }[];
+}
+
+export interface ChatCitation {
+  index: number;
+  chunkId: string;
+  docId: string;
+  docTitle: string;
+  pageNumber: number;
+  snippet: string;
+  similarity: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  citations?: ChatCitation[];
+  latencyMs?: number;
+  retrievedCount?: number;
+}
+
+export interface ChatThread {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  collectionId?: string | 'all';
+  messages: ChatMessage[];
+}
+
+export interface EvalMetric {
+  name: string;
+  score: number;
+  change: string;
+  status: 'optimal' | 'warning' | 'critical';
+  description: string;
+}
+
+export interface EvalTestCase {
+  id: string;
+  query: string;
+  targetCollection: string;
+  expectedSource: string;
+  actualRetrieved: string;
+  contextRelevance: number;
+  groundedness: number;
+  answerRelevance: number;
+  latencyMs: number;
+  status: 'passed' | 'review' | 'failed';
 }
