@@ -810,6 +810,7 @@ Hardware serial numbers matched against asset registry with 100% concordance.`
     {:else if selectedCollection}
       <CollectionDetailView
         collection={selectedCollection}
+        {collections}
         {documents}
         {currentUser}
         {teamAllocations}

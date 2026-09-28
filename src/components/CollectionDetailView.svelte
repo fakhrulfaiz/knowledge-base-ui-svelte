@@ -16,8 +16,8 @@
     Lock
   } from '@lucide/svelte';
   import type { Collection, DocumentItem, TeamAllocationRecord, UserProfile } from '../types';
-  import { computeDocumentGraph } from '../utils/retrieval';
   import DocumentGridCardPreview from './DocumentGridCardPreview.svelte';
+  import CollectionVectorGraph from './CollectionVectorGraph.svelte';
   import { formatBytes, getCollectionUsedBytes } from '../utils/resourceUtils';
   import {
     canUploadToCollection,
@@ -29,6 +29,7 @@
   interface Props {
     collection: Collection;
     documents: DocumentItem[];
+    collections?: Collection[];
     currentUser?: UserProfile;
     teamAllocations?: TeamAllocationRecord[];
     onOpenTeamAllocationModal?: (teamRecord: TeamAllocationRecord) => void;
@@ -44,6 +45,7 @@
   let {
     collection,
     documents,
+    collections = [],
     currentUser,
     teamAllocations,
     onOpenTeamAllocationModal,
@@ -89,8 +91,6 @@
     );
   });
 
-  let graph = $derived(computeDocumentGraph(collectionDocs, 'combined', 0.15));
-
   let scopeLabel = $derived(
     collection.scope === 'project'
       ? `Project (${collection.projectName || 'Active'})`
@@ -98,17 +98,6 @@
       ? 'Organization'
       : `Team (${collection.teamName || 'Engineering'})`
   );
-
-  let activeFocusDoc = $derived(
-    collectionDocs.find((d) => d.id === selectedDocId) || collectionDocs[0] || null
-  );
-
-  let relatedEdges = $derived.by(() => {
-    if (!activeFocusDoc) return [];
-    return graph.edges.filter(
-      (e) => e.source === activeFocusDoc.id || e.target === activeFocusDoc.id
-    );
-  });
 </script>
 
 <div class="flex-1 flex flex-col h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors">
@@ -487,136 +476,16 @@
       </div>
     </div>
   {:else}
-    <!-- Related Documents View: Clean, intuitive visual connection -->
-    <div class="flex-1 flex overflow-hidden bg-neutral-50 dark:bg-neutral-950">
-      <!-- Document list on left -->
-      <div class="w-80 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0">
-        <div class="p-3 border-b border-neutral-200 dark:border-neutral-800 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-          Select Document to Inspect Connections
-        </div>
-        <div class="flex-1 overflow-y-auto p-2 space-y-1">
-          {#each collectionDocs as doc (doc.id)}
-            {@const isSelected = activeFocusDoc?.id === doc.id}
-            {@const docConnectionsCount = graph.edges.filter(
-              (e) => e.source === doc.id || e.target === doc.id
-            ).length}
-            <button
-              type="button"
-              onclick={() => (selectedDocId = doc.id)}
-              class="w-full text-left p-2.5 rounded-lg border text-xs transition-all cursor-pointer {isSelected
-                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-white dark:bg-neutral-800/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200'}"
-            >
-              <div class="font-semibold line-clamp-1">{doc.title}</div>
-              <div
-                class="text-[11px] mt-1 flex items-center justify-between {isSelected
-                  ? 'text-blue-100'
-                  : 'text-neutral-400 dark:text-neutral-500'}"
-              >
-                <span>{doc.pageCount} pages</span>
-                <span>{docConnectionsCount} connections</span>
-              </div>
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Right Connections Details -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-6">
-        {#if activeFocusDoc}
-          <div>
-            <div class="bg-white dark:bg-neutral-900 p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] uppercase font-mono tracking-wider text-neutral-400 dark:text-neutral-500">
-                  Currently Focused Document
-                </span>
-                <button
-                  type="button"
-                  onclick={() => onOpenDocument(activeFocusDoc, 1)}
-                  class="flex items-center gap-1 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 cursor-pointer"
-                >
-                  <span>Open Document</span>
-                  <ExternalLink class="w-3 h-3" />
-                </button>
-              </div>
-              <h2 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-                {activeFocusDoc.title}
-              </h2>
-              <p class="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                {activeFocusDoc.summary}
-              </p>
-              {#if activeFocusDoc.entities.length > 0}
-                <div class="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex flex-wrap gap-1.5">
-                  {#each activeFocusDoc.entities as e, idx (idx)}
-                    <span
-                      class="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[11px]"
-                    >
-                      {e}
-                    </span>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-
-            <!-- Connected Documents List -->
-            <div class="mt-6 space-y-3">
-              <h3 class="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
-                Connected Documents in Collection ({relatedEdges.length})
-              </h3>
-
-              {#if relatedEdges.length === 0}
-                <div class="p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-center text-xs text-neutral-400 dark:text-neutral-500">
-                  No strong direct correlations found for this document yet. Add more related files to establish cross-references.
-                </div>
-              {:else}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {#each relatedEdges as edge, i (i)}
-                    {@const targetId = edge.source === activeFocusDoc.id ? edge.target : edge.source}
-                    {@const targetDoc = collectionDocs.find((d) => d.id === targetId)}
-                    {#if targetDoc}
-                      <div
-                        class="p-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 transition-all flex flex-col justify-between"
-                      >
-                        <div>
-                          <div class="flex items-center justify-between text-[11px] text-neutral-400 dark:text-neutral-500 mb-1">
-                            <span class="text-neutral-600 dark:text-neutral-300 font-medium">
-                              {Math.round(edge.weight * 100)}% relationship match
-                            </span>
-                            <span class="uppercase text-[10px] font-mono">
-                              {edge.type}
-                            </span>
-                          </div>
-
-                          <h4 class="text-xs font-semibold text-neutral-900 dark:text-neutral-100 line-clamp-1 mb-1.5">
-                            {targetDoc.title}
-                          </h4>
-
-                          <div class="text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800/60 p-2 rounded border border-neutral-100 dark:border-neutral-800 mb-2">
-                            {edge.reasons[0] || 'Shared architecture & technical scope'}
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onclick={() => onOpenDocument(targetDoc, 1)}
-                          class="mt-2 flex items-center justify-between text-xs text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 font-medium pt-2 border-t border-neutral-100 dark:border-neutral-800 cursor-pointer"
-                        >
-                          <span>Read Connected Doc</span>
-                          <ArrowRight class="w-3 h-3" />
-                        </button>
-                      </div>
-                    {/if}
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          </div>
-        {:else}
-          <div class="text-center text-neutral-400 dark:text-neutral-500 text-xs py-12">
-            No documents found in this collection.
-          </div>
-        {/if}
-      </div>
+    <!-- Related Documents View: Interactive Document-Only Vector Knowledge Graph -->
+    <div class="flex-1 overflow-hidden flex flex-col">
+      <CollectionVectorGraph
+        {collection}
+        allDocuments={documents}
+        {collections}
+        {currentUser}
+        {selectedDocId}
+        {onOpenDocument}
+      />
     </div>
   {/if}
 </div>

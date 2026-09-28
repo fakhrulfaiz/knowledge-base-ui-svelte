@@ -210,3 +210,25 @@ export function getUserPermissions(user: UserProfile | null | undefined): UserPe
     }
   };
 }
+
+export function isCollectionAccessible(
+  user: UserProfile | null | undefined,
+  collection: Collection
+): boolean {
+  if (!user) return collection.scope === 'org';
+  if (user.systemRole === 'owner' || user.systemRole === 'admin') return true;
+
+  if (collection.scope === 'org') return true;
+  if (collection.scope === 'team') {
+    if (!collection.teamName || !user.teamName) return true;
+    return collection.teamName.toLowerCase() === user.teamName.toLowerCase();
+  }
+  if (collection.scope === 'mine') {
+    return collection.createdBy.email === user.email || collection.createdBy.name === user.name;
+  }
+  if (collection.scope === 'project') {
+    return true;
+  }
+  return true;
+}
+
